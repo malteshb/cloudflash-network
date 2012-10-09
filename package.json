@@ -1,0 +1,47 @@
+{
+  "name": "network",
+  "version": "0.1.4",
+  "dependencies": {
+    "fileops": "0.1.3",
+    "json-schema": "0.2.0",
+    "dirty": "0.9.x",
+    "node-uuid": "1.3.x"
+  },
+  "engines": {
+    "node": "0.6.x"
+  },
+  "devDependencies": {},
+  "optionalDependencies": {},
+  "author": {
+    "name": "Geetha Rani"
+  },
+  "description": "network is a easy to use module that exposes endpoints",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/clearpath-networks/network.git"
+  },
+  "keywords": [
+    "network"
+  ],
+  "main": "./lib/networklib",
+  "contributors": [
+    {
+      "name": "Peter.K.Lee"
+    },
+    {
+      "name": "Badri Narayanan"
+    },
+    {
+      "name": "Geetha R"
+    }
+  ],
+  "_id": "network@0.1.4",
+  "_engineSupported": true,
+  "_npmVersion": "1.1.24",
+  "_nodeVersion": "v0.6.19",
+  "_defaultsLoaded": true,
+  "dist": {
+    "shasum": "1f89b0c0ac3afc3eda0cac2962362a8e903994a0"
+  },
+  "_from": "/home/geetha/webApi/coffeeexp/network_module"
+}
