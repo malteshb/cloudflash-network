@@ -43,17 +43,16 @@ Success: Returns JSON data with list of network configured.
 
 ```
 
-    {
-       "static":
-       [
-           {
-               "device": "eth0:0",
-               "inetaddr": "192.168.8.139",
-               "netmask": "255.255.255.0",
-               "gateway": ""
-           }
-       ]
-    }
+{
+    "static": [
+        {
+            "device": "eth0:0",
+            "inetaddr": "192.168.8.139",
+            "netmask": "255.255.255.0",
+            "gateway": ""
+        }
+    ]
+}
 
 ```
 
@@ -68,48 +67,44 @@ Configure Network
 
 ### Request JSON
 
-    {
-	"static" : [{
- 	"device" : "eth0","inetaddr": "10.1.15.1",                        
-	"netmask" : "255.255.255.0",
-	"broadcast" : "169.254.255.255",
-	"network" : "169.254.255.255",
-	"vlan" : "integer",
-	"hwaddress" : "string",
-	"gateway" : "string",
-	"up" : {
-	"add" : [{ "net" : "10.1.15.2", "netmask":"255.255.255.0",
-	"gw":"string"}]
-	},
-	"down" : {
-	"del" : [{"net":"10.1.15.3", "netmask":"255.255.255.0",
-	"gw":"string"}]}
-	},
-	{
-	"device" : "lan0","inetaddr": "10.1.15.4",                        
-	"netmask" : "255.255.255.0",
-	"broadcast" : "169.254.255.255",
-	"network" : "169.254.255.254",
-	"vlan" : "integer",
-	"hwaddress" : "string",
-	"gateway" : "string",
-	"up" : {
-	"add" : [{ "net" : "10.1.15.5", "netmask":"255.255.255.0",
-	"gw":"string"},
-	{ "net" : "string1", "netmask":"255.255.255.0",
-	"gw1":"string"}
-	]
-	},
-	"down" : {
-	"de" : [{"net":"10.1.15.6", "netmask":"255.255.255.0",
-	"gw":"string"}]}
-	}]
-   }
-
+{
+    "static": [
+        {
+            "device": "eth0",
+            "inetaddr": "10.1.15.1",
+            "netmask": "255.255.255.0",
+            "broadcast": "169.254.255.255",
+            "network": "169.254.255.255",
+            "vlan": "vlan4",
+            "hwaddress": "8c:89:a5:3d:f1:69",
+            "gateway": "10.2.56.1",
+            "up": {
+                "add": [
+                    {
+                        "net": "10.1.15.2",
+                        "netmask": "255.255.255.0",
+                        "gw": "10.1.15.1"
+                    }
+                ]
+            },
+            "down": {
+                "del": [
+                    {
+                        "net": "10.1.15.3",
+                        "netmask": "255.255.255.0",
+                        "gw": "10.1.15.4"
+                    }
+                ]
+            }
+        }
+    ]
+}
 
 ### Response JSON
 
-    {"result":"success"}
+{
+    "result": "success"
+}
 
 
 List a Network 
@@ -127,11 +122,12 @@ Success: Returns JSON data with list of network configured.
 
 ```
 
-    { "device" : "eth0", 
-      "status" : "active",
-      "txbytes" : "72013", 
-      "rxbytes" : "72013"
-     }
+{
+    "device": "eth0",
+    "status": "active",
+    "txbytes": "72013",
+    "rxbytes": "72013"
+}
 
 ```
 
@@ -155,5 +151,7 @@ On Success returns 200 with JSON data
 
 ### Response JSON
 
-    {"result":"success"}
+{
+    "result": "success"
+}
 
