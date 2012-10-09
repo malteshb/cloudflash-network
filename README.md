@@ -31,8 +31,8 @@ cloudflash-network
  List Network
 --------------
 
-    Verb  URI	              Description
-    GET	/network/interfaces	List summary of network interfaces configured.
+    Verb   URI                 Description
+    GET  /network/interfaces	List summary of network interfaces configured.
 
 
 Note: The request does not require a message body.
@@ -43,16 +43,16 @@ Success: Returns JSON data with list of network configured.
 
 ```
 
-{
-    "static": [
-        {
-            "device": "eth0:0",
-            "inetaddr": "192.168.8.139",
-            "netmask": "255.255.255.0",
-            "gateway": ""
-        }
-    ]
-}
+    {
+        "static": [
+            {
+                "device": "eth0:0",
+                "inetaddr": "192.168.8.139",
+                "netmask": "255.255.255.0",
+                "gateway": ""
+            }
+        ]
+    }
 
 ```
 
@@ -60,58 +60,58 @@ Configure Network
 ------------------
 
 
-    Verb	URI	              Description
+    Verb	URI	                Description
     POST	/network/interfaces	Create network interfaces configuration.
 
 **Example Request and Response**
 
 ### Request JSON
-
-{
-    "static": [
-        {
-            "device": "eth0",
-            "inetaddr": "10.1.15.1",
-            "netmask": "255.255.255.0",
-            "broadcast": "169.254.255.255",
-            "network": "169.254.255.255",
-            "vlan": "vlan4",
-            "hwaddress": "8c:89:a5:3d:f1:69",
-            "gateway": "10.2.56.1",
-            "up": {
-                "add": [
-                    {
-                        "net": "10.1.15.2",
-                        "netmask": "255.255.255.0",
-                        "gw": "10.1.15.1"
-                    }
-                ]
-            },
-            "down": {
-                "del": [
-                    {
-                        "net": "10.1.15.3",
-                        "netmask": "255.255.255.0",
-                        "gw": "10.1.15.4"
-                    }
-                ]
+         
+    {
+        "static": [
+            {
+                "device": "eth0",
+                "inetaddr": "10.1.15.1",
+                "netmask": "255.255.255.0",
+                "broadcast": "169.254.255.255",
+                "network": "169.254.255.255",
+                "vlan": "vlan4",
+                "hwaddress": "8c:89:a5:3d:f1:69",
+                "gateway": "10.2.56.1",
+                "up": {
+                    "add": [
+                        {
+                            "net": "10.1.15.2",
+                            "netmask": "255.255.255.0",
+                            "gw": "10.1.15.1"
+                         }
+                    ]
+                },
+                "down": {
+                    "del": [
+                        {
+                            "net": "10.1.15.3",
+                            "netmask": "255.255.255.0",
+                            "gw": "10.1.15.4"
+                        }
+                    ]
+                }
             }
-        }
-    ]
-}
+        ]
+    }
 
 ### Response JSON
 
-{
-    "result": "success"
-}
+    {
+        "result": "success"
+    }
 
 
 List a Network 
 --------------
 
     Verb	URI	                     Description
-    GET	/network/interfaces/:id	Describes an configured network by name.
+    GET	/network/interfaces/:id	  Describes an configured network by name.
 
 
 Note: The request does not require a message body.
@@ -122,12 +122,12 @@ Success: Returns JSON data with list of network configured.
 
 ```
 
-{
-    "device": "eth0",
-    "status": "active",
-    "txbytes": "72013",
-    "rxbytes": "72013"
-}
+    {
+        "device": "eth0",
+        "status": "active",
+        "txbytes": "72013",
+        "rxbytes": "72013"
+    }
 
 ```
 
@@ -136,7 +136,7 @@ Success: Returns JSON data with list of network configured.
 Delete a network
 ----------------
 
-    Verb	URI	                 Description
+    Verb	  URI	                     Description
     DELETE	/network/interfaces/:id	   Delete an configured network by name.
 
 On Success returns 200 with JSON data
@@ -151,7 +151,7 @@ On Success returns 200 with JSON data
 
 ### Response JSON
 
-{
-    "result": "success"
-}
+    {
+        "result": "success"
+    }
 
