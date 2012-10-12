@@ -1,39 +1,45 @@
 validate = require('json-schema').validate
-nwklib = require './networklib'
+interfaces = require './interfaces'
 @include = ->
 
-    nwk = new nwklib
+    iface = new interfaces
     filename = "/etc/network/interfaces.tmp"
   
-    validateschemaNwk = ->
-        result = validate @body, nwklib.nwkschema
+    validateIfaceSchema = ->
+        result = validate @body, interfaces..schema
         console.log result
-        return @next new Error "Invalid network configuration posting!: #{result.errors}" unless result.valid
+        return @next new Error "Invalid network interface configuration posting!: #{result.errors}" unless result.valid
         @next()
 
-    @post '/network/interfaces', validateschemaNwk,  ->
-        nwk.confignwk filename, @body, (res) =>
+    @post '/network/interfaces/:id', validateIfaceSchema,  ->
+        iface.config @params.id, @body, (res) =>
             unless res instanceof Error
                 @send res
             else
                 @next new Error "Invalid network posting! #{res}"
     
     @get '/network/interfaces' : ->
-        nwk.getallnwk filename, (res) =>
+        iface.list (res) =>
             unless res instanceof Error
                 @send res
             else
                 @next res
 
-    @get "/network/interfaces/:id" : ->        
-        fStatus = "/sys/class/net/#{@params.id}/operstate"
-        fTxb = "/sys/class/net/#{@params.id}/statistics/tx_bytes"
-        fRxb = "/sys/class/net/#{@params.id}/statistics/rx_bytes"
-        nwk.getnwk fStatus, fTxb, fRxb, @params, (res) =>
+    @get "/network/interfaces/:id" : ->
+        iface.getInfo @params.id, (res) =>
             unless res instanceof Error
                 @send res
             else
                 @next res
+
+    @del "/network/interfaces/:id" : ->
+        iface.delete @params.id, (res) =>
+            unless res instanceof Error
+                @send res
+            else
+                @next res
+
+
 
      
 
