@@ -6,7 +6,9 @@ interfaces = require './interfaces'
     filename = "/etc/network/interfaces.tmp"
   
     validateIfaceSchema = ->
-        result = validate @body, interfaces..schema
+        console.log 'in validate schema'
+        console.log @body
+        result = validate @body, interfaces.schema
         console.log result
         return @next new Error "Invalid network interface configuration posting!: #{result.errors}" unless result.valid
         @next()
@@ -34,6 +36,7 @@ interfaces = require './interfaces'
 
     @del "/network/interfaces/:id" : ->
         iface.delete @params.id, (res) =>
+            console.log res
             unless res instanceof Error
                 @send res
             else
@@ -43,4 +46,3 @@ interfaces = require './interfaces'
 
      
 
-    

@@ -3,36 +3,36 @@ fileops = require 'fileops'
 validate = require('json-schema').validate
 exec = require('child_process').exec
 
-db =
-    main: require('dirty') '/tmp/iface.db'
+@db = db =
+    iface: require('dirty') '/tmp/iface.db'
 
 
 #schema to validate incoming JSON      
 ifaceSchema =
-    name: "network"
+    name: "interface"
     type: "object"
     additionalProperties: false
     properties:
-        static   : {"type":"boolean", "required":false}
-        dhcp     : {"type":"string", "required":false}
-        inetaddr : {"type":"string", "required":true}
+        static: {"type":"boolean", "required":false}
+        dhcp: {"type":"boolean", "required":false}
+        inetaddr: {"type":"string", "required":true}
         broadcast: {"type":"string", "required":true}
-        networkr : {"type":"string", "required":true}
-        vlan     : {"type":"string", "required":false}
-        hwaddres : {"type":"string", "required":false}
-        gateway  : {"type":"string", "required":false}
-        'bridge_ports' : {"type":"string", "required":false}
-        'bridge_fd'    : {"type":"number" , "required":false}
-        'bridge_hello' : {"type":"number", "required":false}
+        network: {"type":"string", "required":true}
+        vlan: {"type":"string", "required":false}
+        hwaddres: {"type":"string", "required":false}
+        gateway: {"type":"string", "required":true}
+        'bridge_ports': {"type":"string", "required":false}
+        'bridge_fd': {"type":"number" , "required":false}
+        'bridge_hello': {"type":"number", "required":false}
         'bridge_maxage': {"type":"number", "required":false}
-        'bridge_stp'   : {"type":"string", "required":false}
+        'bridge_stp': {"type":"string", "required":false}
             
 
 
 class interfaces
     constructor:  ->
         console.log 'networklib initialized'
-        @ifdb = db.main
+        ifdb = db.iface
 
     getDevType: (type) ->
         res = type
@@ -57,28 +57,29 @@ class interfaces
         for ifid in ifaces
             iface = {}
             iface.name = ifid
-            console.log 'getting info for ' + ifid
             iface.upstatus = fileops.readFileSync "/sys/class/net/#{ifid}/operstate"
-            console.log ifid + ' status ' + iface.upstatus
             iface.mtu = fileops.readFileSync "/sys/class/net/#{ifid}/mtu"
-            console.log ifid + ' mtu  ' + iface.mtu
             iface.address = fileops.readFileSync "/sys/class/net/#{ifid}/address"
-            console.log ifid + ' address is ' + iface.address
             type = fileops.readFileSync  "/sys/class/net/#{ifid}/type"
             typenumber = type.split('\n')
             iface.devtype = @getDevType(typenumber[0])
+            console.log iface
             res.push iface
         callback (res)
 
-    getConfig: ->
+    getConfig: (devName) ->
         console.log 'listing device configuration'
+        entry = db.iface.get  devName
+        console.log entry
+        return entry
 
     getStats: ->
         console.log 'listing device stats'
 
     updateConfig: (devName) ->
+        console.log 'loading config on unix system'
         #Combine all interface configs into /etc/network/interfaces file
-        #and restart the interfaces
+        #and restart the interfaces.
 
     config: (devName, body, callback) ->
         exists = 0
@@ -89,11 +90,13 @@ class interfaces
         if body.static and body.dhcp
             return new Error "Invalid config posting. Must be either static or dhcp interface"
         config = "iface " + devName + " inet "
+        console.log body 
+        '''
         if body.static
-            config + = "static\n"
+            config += "static\n"
         else
             config += "dhcp\n"
-
+        '''
         for key, val of body
             switch (typeof val)
                 when "number", "string"
@@ -101,14 +104,15 @@ class interfaces
                 when "boolean"
                     config += key + "\n"
 
+        console.log 'config is ' + config
         filename = "/config/network/interfaces/#{devName}"
-        fileops.createFile filename, (result) ->
+        fileops.createFile filename, (result) =>
             return new Error "Unable to create configuration file for device: #{devName}!" if result instanceof Error
             fileops.updateFile filename, config
             try
-                @ifdb.set devName, body, ->
+                db.iface.set devName, body, =>
                     console.log "#{devName} added to network interfaces"
-                @updateConfig(devName)
+                @updateConfig devName
                 callback({result:true})
 
             catch err
@@ -117,11 +121,22 @@ class interfaces
 
     getInfo: (devName, callback) ->
         # get status, running stats, configuration for the given device
-        console.log 'in getInfo'
+        res = {}
+        res.config = @getConfig devName
+        res.stats = @getStats devName
+        res.operstate = fileops.readFileSync "/sys/class/net/#{ifid}/operstate"
+        callback (res)
 
     delete: (devName, callback) ->
         console.log 'deleting the devname ' + devName
+        fileops.removeFile "/config/network/interfaces/#{devName}", (result) =>
+            if result instanceof Error
+                err = new Error "Invalid or unconfigured device posting!: #{devName}"
+                callback(err)
+            else
+                @updateConfig()
+                callback({result:true})
 
     
-module.exports = new interfaces
+module.exports = interfaces
 module.exports.schema = ifaceSchema
