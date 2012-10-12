@@ -76,10 +76,26 @@ class interfaces
     getStats: ->
         console.log 'listing device stats'
 
-    updateConfig: (devName) ->
+    updateConfig: ->
         console.log 'loading config on unix system'
-        #Combine all interface configs into /etc/network/interfaces file
-        #and restart the interfaces.
+        ifaces = fileops.readdirSync "/sys/class/net"
+        config = "auto "
+        for ifid in ifaces
+            config += ifid
+            config += " "
+        config += "\n"
+
+        console.log config
+        files = fileops.readdirSync "/config/network/interfaces"
+        console.log 'files present ' + files
+        for file in files
+            config += fileops.readFileSync "/config/network/interfaces/#{file}"
+            console.log config
+        #for now I do not want to mess up my ubuntu system :)    
+        fileops.updateFile "/etc/network/interfaces", config
+        for ifid in ifaces
+            console.log 'running ifup on device ' + ifid
+            exec "ifup #{ifid}"
 
     config: (devName, body, callback) ->
         exists = 0
@@ -112,7 +128,7 @@ class interfaces
             try
                 db.iface.set devName, body, =>
                     console.log "#{devName} added to network interfaces"
-                @updateConfig devName
+                @updateConfig()
                 callback({result:true})
 
             catch err
@@ -123,8 +139,8 @@ class interfaces
         # get status, running stats, configuration for the given device
         res = {}
         res.config = @getConfig devName
-        res.stats = @getStats devName
-        res.operstate = fileops.readFileSync "/sys/class/net/#{ifid}/operstate"
+        #res.stats = @getStats devName
+        res.operstate = fileops.readFileSync "/sys/class/net/#{devName}/operstate"
         callback (res)
 
     delete: (devName, callback) ->
