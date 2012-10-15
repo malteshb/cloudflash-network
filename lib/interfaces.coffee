@@ -2,13 +2,9 @@
 fileops = require 'fileops'
 validate = require('json-schema').validate
 exec = require('child_process').exec
-fs = require 'fs'
-uuid = require 'node-uuid'
-
 
 @db = db =
-    iface: require('dirty') '/tmp/iface.db'
-    dhcp:  require('dirty') '/tmp/dhcp.db'
+    iface: require('dirty') '/tmp/iface.db'    
 
 
 #schema to validate incoming JSON      
@@ -31,48 +27,13 @@ ifaceSchema =
         'bridge_maxage': {"type":"number", "required":false}
         'bridge_stp': {"type":"string", "required":false}
 
-#schema to validate incoming JSON dhcp configuration
-dhcpSchema =
-    name: "dhcp"
-    type: "object"
-    additionalProperties: false
-    properties:
-        start:              {"type":"string", "required":true}
-        end:                {"type":"string", "required":true}
-        interface:          {"type":"string", "required":false}
-        max_leases:         {"type":"number", "required":false}
-        remaining:          {"type":"string", "required":false}
-        auto_time:          {"type":"number", "required":false}
-        decline_time:       {"type":"number", "required":false}
-        conflict_time:      {"type":"number", "required":false}
-        offer_time:         {"type":"number", "required":false}
-        min_lease:          {"type":"number", "required":false}
-        lease_file:         {"type":"string", "required":false}
-        pidfile:            {"type":"string", "required":false}
-        notify_file:        {"type":"string", "required":false}
-        siaddr:             {"type":"string", "required":false}
-        sname:              {"type":"string", "required":false}
-        boot_file:          {"type":"string", "required":false}
-        option:
-           items:           {"type":"string"}
-
-#schema to validate incoming JSON addresses
-addrSchema =
-      name: "dhcp"
-      type: "object"
-      additionalProperties: false
-      properties:
-          optionparam:        {"type":"string", "required":"true"}
-          address:
-              items:          { type: "string" }
 
             
 
 class interfaces
     constructor:  ->
         console.log 'networklib initialized'
-        ifdb = db.iface
-        dhcpdb = db.dhcp
+        ifdb = db.iface        
 
     getDevType: (type) ->
         res = type
@@ -96,10 +57,15 @@ class interfaces
         ifaces = fileops.readdirSync "/sys/class/net"
         for ifid in ifaces
             iface = {}
+            result = ''
+            #Added replace to trim newline
             iface.name = ifid
-            iface.upstatus = fileops.readFileSync "/sys/class/net/#{ifid}/operstate"
-            iface.mtu = fileops.readFileSync "/sys/class/net/#{ifid}/mtu"
-            iface.address = fileops.readFileSync "/sys/class/net/#{ifid}/address"
+            result = fileops.readFileSync "/sys/class/net/#{ifid}/operstate"
+            iface.upstatus = result.replace /\n/g, ""
+            result = fileops.readFileSync "/sys/class/net/#{ifid}/mtu"
+            iface.mtu = result.replace /\n/g, ""
+            result = fileops.readFileSync "/sys/class/net/#{ifid}/address"
+            iface.address = result.replace /\n/g, ""
             type = fileops.readFileSync  "/sys/class/net/#{ifid}/type"
             typenumber = type.split('\n')
             iface.devtype = @getDevType(typenumber[0])
@@ -110,11 +76,21 @@ class interfaces
     getConfig: (devName) ->
         console.log 'listing device configuration'
         entry = db.iface.get  devName
+        #return new Error "#{devName} does not exist" unless entry
         console.log entry
         return entry
 
-    getStats: ->
-        console.log 'listing device stats'
+    # Added getStats function
+    getStats: (devName) ->
+        stats = {}
+        result = ''
+        console.log 'listing device stats' 
+        result = fileops.readFileSync "/sys/class/net/#{devName}/statistics/tx_bytes"
+        stats.txbytes = result.replace /\n/g, ""
+        result = fileops.readFileSync "/sys/class/net/#{devName}/statistics/rx_bytes".replace /\n/g, ""
+        stats.rxbytes =  result.replace /\n/g, ""
+        return stats
+
 
     updateConfig: ->
         console.log 'loading config on unix system'
@@ -139,49 +115,67 @@ class interfaces
 
     config: (devName, body, callback) ->
         exists = 0
-        ifaces = fileops.readdirSync "/sys/class/net"
+        ifaces = fileops.readdirSync "/sys/class/net"        
+
         for ifid in ifaces
             if ifid == devName then exists = 1
-        return new Error "Invalid Device " + devName + " name posting!" unless exists
-        if body.static and body.dhcp
-            return new Error "Invalid config posting. Must be either static or dhcp interface"
-        config = "iface " + devName + " inet "
-        console.log body 
-        '''
-        if body.static
-            config += "static\n"
-        else
-            config += "dhcp\n"
-        '''
-        for key, val of body
-            switch (typeof val)
-                when "number", "string"
-                    config += key + ' ' + val + "\n"
-                when "boolean"
-                    config += key + "\n"
+        
+        #return new Error "Invalid Device " + devName + " name posting!" if not exists
+        #Added in try catch to fix the error
+        try
+            throw new Error "Invalid Device " + devName + " name posting!" unless exists            
 
-        console.log 'config is ' + config
-        filename = "/config/network/interfaces/#{devName}"
-        fileops.createFile filename, (result) =>
-            return new Error "Unable to create configuration file for device: #{devName}!" if result instanceof Error
-            fileops.updateFile filename, config
-            try
-                db.iface.set devName, body, =>
-                    console.log "#{devName} added to network interfaces"
-                @updateConfig()
-                callback({result:true})
+            unless body.static or body.dhcp
+                throw new Error "Invalid config posting. Must be either static or dhcp interface"
+            config = "iface " + devName + " inet "
+            console.log body 
+            '''
+            if body.static
+                config += "static\n"
+            else
+                config += "dhcp\n"
+            '''
+            for key, val of body
+                switch (typeof val)
+                    when "number", "string"
+                        config += key + ' ' + val + "\n"
+                    when "boolean"
+                        config += key + "\n"
 
-            catch err
-                console.log err
-                callback(err)
+            console.log 'config is ' + config
+            filename = "/config/network/interfaces/#{devName}"
+            fileops.createFile filename, (result) =>
+                return new Error "Unable to create configuration file for device: #{devName}!" if result instanceof Error
+                fileops.updateFile filename, config 
+                try
+                    db.iface.set devName, body, =>
+                        console.log "#{devName} added to network interfaces"
+                    @updateConfig()
+                    callback({result:true})
+
+                catch err
+                    console.log err
+                    callback(err)
+        catch err
+            callback(err)
+
 
     getInfo: (devName, callback) ->
         # get status, running stats, configuration for the given device
         res = {}
-        res.config = @getConfig devName
-        #res.stats = @getStats devName
-        res.operstate = fileops.readFileSync "/sys/class/net/#{devName}/operstate"
-        callback (res)
+        result = ''        
+        entry = @getConfig devName
+        
+        # Added try catch to fix error
+        try
+            throw new Error "#{devName} does not exist!" unless entry
+            res.config = entry        
+            res.stats = @getStats devName
+            result = fileops.readFileSync "/sys/class/net/#{devName}/operstate" 
+            res.operstate = result.replace /\n/g, ""
+            callback (res)
+        catch err
+            callback(err)
 
     delete: (devName, callback) ->
         console.log 'deleting the devname ' + devName
@@ -193,102 +187,6 @@ class interfaces
                 @updateConfig()
                 callback({result:true})
 
-    # createConfig: Function to create the config from the input JSON
-    createConfig: (optionvalue, @body, callback) ->
-        config = ''
-        for key, val of @body.address
-          switch (typeof val)
-            when "string"
-              config += optionvalue + ' ' + val + "\n"
-        callback (config)
-
-    # writeConfig: Function to add/modify configuration and update the dhcp db with id 
-    writeConfig: (filename, config, id, body, callback) ->
-        console.log 'inside writeConfig' 
-        fileops.fileExists filename, (result) ->
-           unless result instanceof Error
-               fs.createWriteStream(filename, flags: "a").write config
-           else
-               fileops.createFile filename, (result) ->
-                  return result if result instanceof Error
-
-               fileops.updateFile filename, config, (result) ->
-                  return result if result instanceof Error
-        try
-           db.dhcp.set id, body, ->
-              console.log "#{id} added to dhcp service configuration"
-           callback({result:true})
-        catch err
-           console.log err
-           callback(err)
-
-    # removeConfig: Function to remove configuration with given id
-    removeConfig: (id, optionvalue, filename) ->
-        entry = db.dhcp.get id
-        if !entry
-            return { "deleted" : "no data to delete"}
-        configList = []
-        if optionvalue=='subnet'
-          optionvalue = ''
-          for key, val of entry
-            switch (typeof val)
-                when "number", "string"
-                   config = key + ' ' + val
-                   configList.push(config)
-                when "object"
-                   if val instanceof Array
-                        for i in val
-                            config = "#{key} #{i}" if key is "option"
-                            configList.push(config)
-        else
-          configList = entry.address
-        newconfig = ''
-        fileops.readFile filename, (result) ->
-            throw new Error result if result instanceof Error
-            for line in result.toString().split '\n'
-                j = 0
-                flag = 0
-                while j < configList.length
-                    config = optionvalue
-                    config += configList[j]
-                    if line==config
-                       flag = 1
-                       j++
-                    else
-                       j++
-                if flag == 0
-                   newconfig += line + '\n'
-            try
-               db.dhcp.rm id, ->
-                  console.log "removed config id: #{id}"
-            catch err
-               return { "deleted" : "failed"}
-
-            fileops.createFile filename, (result) ->
-                return result if result instanceof Error
-
-            fileops.updateFile filename, newconfig, (result) ->
-                return result if result instanceof Error
-        return { "deleted" : "success"}
-
-    new: (config) ->
-        instance = {}
-        instance.id = uuid.v4()
-        instance.config = config
-        return instance
-
-    getConfigEntryByID: (id, callback) ->
-        entry = db.dhcp.get id
-        instance = {}
-        if entry
-            instance.id = id
-            instance.config = entry
-            callback( instance )
-        else
-            callback ({ "id": "invalid" })
-
-
 module.exports = interfaces
 module.exports.schema = ifaceSchema
-module.exports.dhcpSchema = dhcpSchema
-module.exports.addrSchema = addrSchema
+
