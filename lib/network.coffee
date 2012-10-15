@@ -1,8 +1,11 @@
 validate = require('json-schema').validate
 interfaces = require './interfaces'
+dhcp = require './dhcp'
+
 @include = ->
 
     iface = new interfaces
+    dh = new dhcp
     filename = "/etc/network/interfaces.tmp"
     dhcpfilename = "/etc/udhcpd.conf"
   
@@ -18,7 +21,7 @@ interfaces = require './interfaces'
     validateDhcpSchema = ->
         console.log 'in validateDhcpSchema'
         console.log @body
-        result = validate @body, interfaces.dhcpSchema
+        result = validate @body, dhcp.dhcpSchema
         console.log result
         return @next new Error "Invalid dhcp configuration posting!: #{result.errors}" unless result.valid
         @next()
@@ -27,7 +30,7 @@ interfaces = require './interfaces'
     validateAddressSchema = ->
         console.log 'in validateAddressSchema'
         console.log @body
-        result = validate @body, interfaces.addrSchema
+        result = validate @body, dhcp.addrSchema
         console.log result
         return @next new Error "Invalid dhcp configuration posting!: #{result.errors}" unless result.valid
         @next()
@@ -63,7 +66,7 @@ interfaces = require './interfaces'
                 @next res
 
     @post '/network/dhcp/subnet', validateDhcpSchema, ->
-       instance = iface.new @body
+       instance = dh.new @body
        config = ''
        for key, val of @body
            switch (typeof val)
@@ -76,32 +79,33 @@ interfaces = require './interfaces'
                         for i in val
                             config += "#{key} #{i}\n" if key is "option"
        body = @body
-       iface.writeConfig dhcpfilename, config, instance.id, body, (res) =>
+       dh.writeConfig dhcpfilename, config, instance.id, body, (res) =>
             unless res instanceof Error
                 @send instance
             else
                 @next new Error "Invalid dhcp posting! #{res}"
 
     @get "/network/dhcp/subnet/:id" : ->
-       iface.getConfigEntryByID @params.id, (res) =>
+       dh.getConfigEntryByID @params.id, (res) =>
             unless res instanceof Error
                 @send res
             else
                 @next new Error "Invalid dhcp getting! #{res}"
 
     @del '/network/dhcp/subnet/:id', ->
+        console.log 'inside /network/dhcp/subnet/:id' 
         id = @params.id
         optionvalue = 'subnet'
-        result = iface.removeConfig(id, optionvalue, dhcpfilename)
+        result = dh.removeConfig(id, optionvalue, dhcpfilename)
         @send result
 
     @post '/network/dhcp/router', validateAddressSchema, ->
-       instance = iface.new @body
+       instance = dh.new @body
        optionvalue = 'option router'
-       iface.createConfig optionvalue, @body, (config) =>
+       dh.createConfig optionvalue, @body, (config) =>
             unless config instanceof Error
                 body = @body
-                iface.writeConfig dhcpfilename, config, instance.id, body, (res) =>
+                dh.writeConfig dhcpfilename, config, instance.id, body, (res) =>
                      unless res instanceof Error
                          @send instance
                      else
@@ -110,7 +114,7 @@ interfaces = require './interfaces'
                 @next new Error "Invalid config getting! #{config}"  
 
     @get "/network/dhcp/router/:id" : ->
-       iface.getConfigEntryByID @params.id, (res) =>
+       dh.getConfigEntryByID @params.id, (res) =>
             unless res instanceof Error
                 @send res
             else
@@ -119,16 +123,16 @@ interfaces = require './interfaces'
     @del '/network/dhcp/router/:id', ->
         id = @params.id
         optionvalue = 'option router '
-        result = iface.removeConfig(id, optionvalue, dhcpfilename)
+        result = dh.removeConfig(id, optionvalue, dhcpfilename)
         @send result
 
     @post '/network/dhcp/timesvr', validateAddressSchema, ->
-       instance = iface.new @body
+       instance = dh.new @body
        optionvalue = 'option timesvr'
-       iface.createConfig optionvalue, @body, (config) =>
+       dh.createConfig optionvalue, @body, (config) =>
             unless config instanceof Error
                 body = @body
-                iface.writeConfig dhcpfilename, config, instance.id, body, (res) =>
+                dh.writeConfig dhcpfilename, config, instance.id, body, (res) =>
                      unless res instanceof Error
                          @send instance
                      else
@@ -137,7 +141,7 @@ interfaces = require './interfaces'
                 @next new Error "Invalid config getting! #{config}"
 
     @get "/network/dhcp/timesvr/:id" : ->
-       iface.getConfigEntryByID @params.id, (res) =>
+       dh.getConfigEntryByID @params.id, (res) =>
             unless res instanceof Error
                 @send res
             else
@@ -146,16 +150,16 @@ interfaces = require './interfaces'
     @del '/network/dhcp/timesvr/:id', ->
         id = @params.id
         optionvalue = 'option timesvr '
-        result = iface.removeConfig(id, optionvalue, dhcpfilename)
+        result = dh.removeConfig(id, optionvalue, dhcpfilename)
         @send result
 
     @post '/network/dhcp/namesvr', validateAddressSchema, ->
-       instance = iface.new @body
+       instance = dh.new @body
        optionvalue = 'option namesvr'
-       iface.createConfig optionvalue, @body, (config) =>
+       dh.createConfig optionvalue, @body, (config) =>
             unless config instanceof Error
                 body = @body
-                iface.writeConfig dhcpfilename, config, instance.id, body, (res) =>
+                dh.writeConfig dhcpfilename, config, instance.id, body, (res) =>
                      unless res instanceof Error
                          @send instance
                      else
@@ -164,7 +168,7 @@ interfaces = require './interfaces'
                 @next new Error "Invalid config getting! #{config}"
 
     @get "/network/dhcp/namesvr/:id" : ->
-       iface.getConfigEntryByID @params.id, (res) =>
+       dh.getConfigEntryByID @params.id, (res) =>
             unless res instanceof Error
                 @send res
             else
@@ -173,16 +177,16 @@ interfaces = require './interfaces'
     @del '/network/dhcp/namesvr/:id', ->
         id = @params.id
         optionvalue = 'option namesvr '
-        result = iface.removeConfig(id, optionvalue, dhcpfilename)
+        result = dh.removeConfig(id, optionvalue, dhcpfilename)
         @send result
 
     @post '/network/dhcp/dns', validateAddressSchema, ->
-       instance = iface.new @body
+       instance = dh.new @body
        optionvalue = 'option dns'
-       iface.createConfig optionvalue, @body, (config) =>
+       dh.createConfig optionvalue, @body, (config) =>
             unless config instanceof Error
                 body = @body
-                iface.writeConfig dhcpfilename, config, instance.id, body, (res) =>
+                dh.writeConfig dhcpfilename, config, instance.id, body, (res) =>
                      unless res instanceof Error
                          @send instance
                      else
@@ -191,7 +195,7 @@ interfaces = require './interfaces'
                 @next new Error "Invalid config getting! #{config}"
 
     @get "/network/dhcp/dns/:id" : ->
-       iface.getConfigEntryByID @params.id, (res) =>
+       dh.getConfigEntryByID @params.id, (res) =>
             unless res instanceof Error
                 @send res
             else
@@ -200,16 +204,16 @@ interfaces = require './interfaces'
     @del '/network/dhcp/dns/:id', ->
         id = @params.id
         optionvalue = 'option dns '
-        result = iface.removeConfig(id, optionvalue, dhcpfilename)
+        result = dh.removeConfig(id, optionvalue, dhcpfilename)
         @send result
      
     @post '/network/dhcp/logsvr', validateAddressSchema, ->
-       instance = iface.new @body
+       instance = dh.new @body
        optionvalue = 'option logsvr'
-       iface.createConfig optionvalue, @body, (config) =>
+       dh.createConfig optionvalue, @body, (config) =>
             unless config instanceof Error
                 body = @body
-                iface.writeConfig dhcpfilename, config, instance.id, body, (res) =>
+                dh.writeConfig dhcpfilename, config, instance.id, body, (res) =>
                      unless res instanceof Error
                          @send instance
                      else
@@ -218,7 +222,7 @@ interfaces = require './interfaces'
                 @next new Error "Invalid config getting! #{config}"
 
     @get "/network/dhcp/logsvr/:id" : ->
-       iface.getConfigEntryByID @params.id, (res) =>
+       dh.getConfigEntryByID @params.id, (res) =>
             unless res instanceof Error
                 @send res
             else
@@ -227,16 +231,16 @@ interfaces = require './interfaces'
     @del '/network/dhcp/logsvr/:id', ->
         id = @params.id
         optionvalue = 'option logsvr '
-        result = iface.removeConfig(id, optionvalue, dhcpfilename)
+        result = dh.removeConfig(id, optionvalue, dhcpfilename)
         @send result
 
     @post '/network/dhcp/cookiesvr', validateAddressSchema, ->
-       instance = iface.new @body
+       instance = dh.new @body
        optionvalue = 'option cookiesvr'
-       iface.createConfig optionvalue, @body, (config) =>
+       dh.createConfig optionvalue, @body, (config) =>
             unless config instanceof Error
                 body = @body
-                iface.writeConfig dhcpfilename, config, instance.id, body, (res) =>
+                dh.writeConfig dhcpfilename, config, instance.id, body, (res) =>
                      unless res instanceof Error
                          @send instance
                      else
@@ -245,7 +249,7 @@ interfaces = require './interfaces'
                 @next new Error "Invalid config getting! #{config}"
 
     @get "/network/dhcp/cookiesvr/:id" : ->
-       iface.getConfigEntryByID @params.id, (res) =>
+       dh.getConfigEntryByID @params.id, (res) =>
             unless res instanceof Error
                 @send res
             else
@@ -254,16 +258,16 @@ interfaces = require './interfaces'
     @del '/network/dhcp/cookiesvr/:id', ->
         id = @params.id
         optionvalue = 'option cookiesvr '
-        result = iface.removeConfig(id, optionvalue, dhcpfilename)
+        result = dh.removeConfig(id, optionvalue, dhcpfilename)
         @send result
 
     @post '/network/dhcp/lprsvr', validateAddressSchema, ->
-       instance = iface.new @body
+       instance = dh.new @body
        optionvalue = 'option lprsvr'
-       iface.createConfig optionvalue, @body, (config) =>
+       dh.createConfig optionvalue, @body, (config) =>
             unless config instanceof Error
                 body = @body
-                iface.writeConfig dhcpfilename, config, instance.id, body, (res) =>
+                dh.writeConfig dhcpfilename, config, instance.id, body, (res) =>
                      unless res instanceof Error
                          @send instance
                      else
@@ -272,7 +276,7 @@ interfaces = require './interfaces'
                 @next new Error "Invalid config getting! #{config}"
 
     @get "/network/dhcp/lprsvr/:id" : ->
-       iface.getConfigEntryByID @params.id, (res) =>
+       dh.getConfigEntryByID @params.id, (res) =>
             unless res instanceof Error
                 @send res
             else
@@ -281,16 +285,16 @@ interfaces = require './interfaces'
     @del '/network/dhcp/lprsvr/:id', ->
         id = @params.id
         optionvalue = 'option lprsvr '
-        result = iface.removeConfig(id, optionvalue, dhcpfilename)
+        result = dh.removeConfig(id, optionvalue, dhcpfilename)
         @send result
 
     @post '/network/dhcp/ntpsrv', validateAddressSchema, ->
-       instance = iface.new @body
+       instance = dh.new @body
        optionvalue = 'option ntpsrv'
-       iface.createConfig optionvalue, @body, (config) =>
+       dh.createConfig optionvalue, @body, (config) =>
             unless config instanceof Error
                 body = @body
-                iface.writeConfig dhcpfilename, config, instance.id, body, (res) =>
+                dh.writeConfig dhcpfilename, config, instance.id, body, (res) =>
                      unless res instanceof Error
                          @send instance
                      else
@@ -299,7 +303,7 @@ interfaces = require './interfaces'
                 @next new Error "Invalid config getting! #{config}"
 
     @get "/network/dhcp/ntpsrv/:id" : ->
-       iface.getConfigEntryByID @params.id, (res) =>
+       dh.getConfigEntryByID @params.id, (res) =>
             unless res instanceof Error
                 @send res
             else
@@ -308,16 +312,16 @@ interfaces = require './interfaces'
     @del '/network/dhcp/ntpsrv/:id', ->
         id = @params.id
         optionvalue = 'option ntpsrv '
-        result = iface.removeConfig(id, optionvalue, dhcpfilename)
+        result = dh.removeConfig(id, optionvalue, dhcpfilename)
         @send result
 
     @post '/network/dhcp/wins', validateAddressSchema, ->
-       instance = iface.new @body
+       instance = dh.new @body
        optionvalue = 'option wins'
-       iface.createConfig optionvalue, @body, (config) =>
+       dh.createConfig optionvalue, @body, (config) =>
             unless config instanceof Error
                 body = @body
-                iface.writeConfig dhcpfilename, config, instance.id, body, (res) =>
+                dh.writeConfig dhcpfilename, config, instance.id, body, (res) =>
                      unless res instanceof Error
                          @send instance
                      else
@@ -326,7 +330,7 @@ interfaces = require './interfaces'
                 @next new Error "Invalid config getting! #{config}"
 
     @get "/network/dhcp/wins/:id" : ->
-       iface.getConfigEntryByID @params.id, (res) =>
+       dh.getConfigEntryByID @params.id, (res) =>
             unless res instanceof Error
                 @send res
             else
@@ -335,7 +339,7 @@ interfaces = require './interfaces'
     @del '/network/dhcp/wins/:id', ->
         id = @params.id
         optionvalue = 'option wins '
-        result = iface.removeConfig(id, optionvalue, dhcpfilename)
+        result = dh.removeConfig(id, optionvalue, dhcpfilename)
         @send result
 
 
