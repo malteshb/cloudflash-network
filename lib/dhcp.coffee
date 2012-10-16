@@ -52,16 +52,23 @@ class dhcp
         dhcpdb = db.dhcp
 
     # createConfig: Function to create the config from the input JSON
-    createConfig: (optionvalue, @body, callback) ->
+    createConfig: (optionvalue, @body, filename, id, callback) ->
         config = ''
         for key, val of @body.address
-          switch (typeof val)
-            when "string"
-              config += optionvalue + ' ' + val + "\n"
-        callback (config)
+            switch (typeof val)
+                when "number", "string"
+                   config += optionvalue + ' ' + val + "\n"
+                when "boolean"
+                    config += key + "\n"
+                when "object"
+                    if val instanceof Array
+                        for i in val
+                            config += "#{key} #{i}\n" if key is "option"
+        res = @writeConfig filename, config, id, body
+        callback (res)
 
     # writeConfig: Function to add/modify configuration and update the dhcp db with id 
-    writeConfig: (filename, config, id, body, callback) ->
+    writeConfig: (filename, config, id, body) ->
         fileops.fileExists filename, (result) ->
            unless result instanceof Error
                fs.createWriteStream(filename, flags: "a").write config
@@ -74,10 +81,10 @@ class dhcp
         try
            db.dhcp.set id, body, ->
               console.log "#{id} added to dhcp service configuration"
-           callback({result:true})
+           return ({result:true})
         catch err
            console.log err
-           callback(err)
+           return err
 
     # removeConfig: Function to remove configuration with given id
     removeConfig: (id, optionvalue, filename) ->
@@ -104,16 +111,16 @@ class dhcp
             throw new Error result if result instanceof Error
             for line in result.toString().split '\n'
                 j = 0
-                flag = 0
+                skipflag = 0
                 while j < configList.length
                     config = optionvalue
                     config += configList[j]
                     if line==config
-                       flag = 1
+                       skipflag = 1
                        j++
                     else
                        j++
-                if flag == 0
+                if skipflag == 0
                    newconfig += line + '\n'
             try
                db.dhcp.rm id, ->

@@ -6,7 +6,6 @@ dhcp = require './dhcp'
 
     iface = new interfaces
     dh = new dhcp
-    filename = "/etc/network/interfaces.tmp"
     dhcpfilename = "/etc/udhcpd.conf"
   
     validateIfaceSchema = ->
@@ -67,30 +66,19 @@ dhcp = require './dhcp'
 
     @post '/network/dhcp/subnet', validateDhcpSchema, ->
        instance = dh.new @body
-       config = ''
-       for key, val of @body
-           switch (typeof val)
-               when "number", "string"
-                   config += key + ' ' + val + "\n"
-               when "boolean"
-                   config += key + "\n"
-               when "object"
-                   if val instanceof Array
-                        for i in val
-                            config += "#{key} #{i}\n" if key is "option"
-       body = @body
-       dh.writeConfig dhcpfilename, config, instance.id, body, (res) =>
-            unless res instanceof Error
-                @send instance
-            else
-                @next new Error "Invalid dhcp posting! #{res}"
+       optionvalue = '' # no option value for subnet config
+       dh.createConfig optionvalue, @body, filename, id, (res) =>
+           if res instanceof Error
+               @next new Error "Invalid DHCP subnet posting!#{res}"
+           else
+               @send res
 
     @get "/network/dhcp/subnet/:id" : ->
        dh.getConfigEntryByID @params.id, (res) =>
             unless res instanceof Error
                 @send res
             else
-                @next new Error "Invalid dhcp getting! #{res}"
+                @next new Error "Failed to fetch subnet id: #{@params.id}"
 
     @del '/network/dhcp/subnet/:id', ->
         console.log 'inside /network/dhcp/subnet/:id' 
@@ -102,16 +90,12 @@ dhcp = require './dhcp'
     @post '/network/dhcp/router', validateAddressSchema, ->
        instance = dh.new @body
        optionvalue = 'option router'
-       dh.createConfig optionvalue, @body, (config) =>
-            unless config instanceof Error
-                body = @body
-                dh.writeConfig dhcpfilename, config, instance.id, body, (res) =>
-                     unless res instanceof Error
-                         @send instance
-                     else
-                         @next new Error "Invalid dhcp posting! #{res}"
-            else
-                @next new Error "Invalid config getting! #{config}"  
+       dh.createConfig optionvalue, @body, filename, id, (res) =>
+           if res instanceof Error
+               @next new Error "Invalid DHCP router posting!#{res}"
+           else
+               @send res
+               
 
     @get "/network/dhcp/router/:id" : ->
        dh.getConfigEntryByID @params.id, (res) =>
@@ -129,16 +113,12 @@ dhcp = require './dhcp'
     @post '/network/dhcp/timesvr', validateAddressSchema, ->
        instance = dh.new @body
        optionvalue = 'option timesvr'
-       dh.createConfig optionvalue, @body, (config) =>
-            unless config instanceof Error
-                body = @body
-                dh.writeConfig dhcpfilename, config, instance.id, body, (res) =>
-                     unless res instanceof Error
-                         @send instance
-                     else
-                         @next new Error "Invalid dhcp posting! #{res}"
-            else
-                @next new Error "Invalid config getting! #{config}"
+       dh.createConfig optionvalue, @body, filename, id, (res) =>
+           if res instanceof Error
+               @next new Error "Invalid DHCP timesvr posting!#{res}"
+           else
+               @send res
+               
 
     @get "/network/dhcp/timesvr/:id" : ->
        dh.getConfigEntryByID @params.id, (res) =>
@@ -156,17 +136,12 @@ dhcp = require './dhcp'
     @post '/network/dhcp/namesvr', validateAddressSchema, ->
        instance = dh.new @body
        optionvalue = 'option namesvr'
-       dh.createConfig optionvalue, @body, (config) =>
-            unless config instanceof Error
-                body = @body
-                dh.writeConfig dhcpfilename, config, instance.id, body, (res) =>
-                     unless res instanceof Error
-                         @send instance
-                     else
-                         @next new Error "Invalid dhcp posting! #{res}"
-            else
-                @next new Error "Invalid config getting! #{config}"
-
+       dh.createConfig optionvalue, @body, filename, id, (res) =>
+           if res instanceof Error
+               @next new Error "Invalid DHCP namesvr posting!#{res}"
+           else
+               @send res
+               
     @get "/network/dhcp/namesvr/:id" : ->
        dh.getConfigEntryByID @params.id, (res) =>
             unless res instanceof Error
@@ -183,17 +158,12 @@ dhcp = require './dhcp'
     @post '/network/dhcp/dns', validateAddressSchema, ->
        instance = dh.new @body
        optionvalue = 'option dns'
-       dh.createConfig optionvalue, @body, (config) =>
-            unless config instanceof Error
-                body = @body
-                dh.writeConfig dhcpfilename, config, instance.id, body, (res) =>
-                     unless res instanceof Error
-                         @send instance
-                     else
-                         @next new Error "Invalid dhcp posting! #{res}"
-            else
-                @next new Error "Invalid config getting! #{config}"
-
+       dh.createConfig optionvalue, @body, filename, id, (res) =>
+           if res instanceof Error
+               @next new Error "Invalid DHCP dns posting!#{res}"
+           else
+               @send res
+               
     @get "/network/dhcp/dns/:id" : ->
        dh.getConfigEntryByID @params.id, (res) =>
             unless res instanceof Error
@@ -210,17 +180,12 @@ dhcp = require './dhcp'
     @post '/network/dhcp/logsvr', validateAddressSchema, ->
        instance = dh.new @body
        optionvalue = 'option logsvr'
-       dh.createConfig optionvalue, @body, (config) =>
-            unless config instanceof Error
-                body = @body
-                dh.writeConfig dhcpfilename, config, instance.id, body, (res) =>
-                     unless res instanceof Error
-                         @send instance
-                     else
-                         @next new Error "Invalid dhcp posting! #{res}"
-            else
-                @next new Error "Invalid config getting! #{config}"
-
+       dh.createConfig optionvalue, @body, filename, id, (res) =>
+           if res instanceof Error
+               @next new Error "Invalid DHCP logsvr posting!#{res}"
+           else
+               @send res
+               
     @get "/network/dhcp/logsvr/:id" : ->
        dh.getConfigEntryByID @params.id, (res) =>
             unless res instanceof Error
@@ -237,16 +202,11 @@ dhcp = require './dhcp'
     @post '/network/dhcp/cookiesvr', validateAddressSchema, ->
        instance = dh.new @body
        optionvalue = 'option cookiesvr'
-       dh.createConfig optionvalue, @body, (config) =>
-            unless config instanceof Error
-                body = @body
-                dh.writeConfig dhcpfilename, config, instance.id, body, (res) =>
-                     unless res instanceof Error
-                         @send instance
-                     else
-                         @next new Error "Invalid dhcp posting! #{res}"
-            else
-                @next new Error "Invalid config getting! #{config}"
+       dh.createConfig optionvalue, @body, filename, id, (res) =>
+           if res instanceof Error
+               @next new Error "Invalid DHCP cookiesvr posting!#{res}"
+           else
+               @send res
 
     @get "/network/dhcp/cookiesvr/:id" : ->
        dh.getConfigEntryByID @params.id, (res) =>
@@ -264,16 +224,12 @@ dhcp = require './dhcp'
     @post '/network/dhcp/lprsvr', validateAddressSchema, ->
        instance = dh.new @body
        optionvalue = 'option lprsvr'
-       dh.createConfig optionvalue, @body, (config) =>
-            unless config instanceof Error
-                body = @body
-                dh.writeConfig dhcpfilename, config, instance.id, body, (res) =>
-                     unless res instanceof Error
-                         @send instance
-                     else
-                         @next new Error "Invalid dhcp posting! #{res}"
-            else
-                @next new Error "Invalid config getting! #{config}"
+       dh.createConfig optionvalue, @body, filename, id, (res) =>
+           if res instanceof Error
+               @next new Error "Invalid DHCP lprsvr posting!#{res}"
+           else
+               @send res
+               
 
     @get "/network/dhcp/lprsvr/:id" : ->
        dh.getConfigEntryByID @params.id, (res) =>
@@ -291,16 +247,12 @@ dhcp = require './dhcp'
     @post '/network/dhcp/ntpsrv', validateAddressSchema, ->
        instance = dh.new @body
        optionvalue = 'option ntpsrv'
-       dh.createConfig optionvalue, @body, (config) =>
-            unless config instanceof Error
-                body = @body
-                dh.writeConfig dhcpfilename, config, instance.id, body, (res) =>
-                     unless res instanceof Error
-                         @send instance
-                     else
-                         @next new Error "Invalid dhcp posting! #{res}"
-            else
-                @next new Error "Invalid config getting! #{config}"
+       dh.createConfig optionvalue, @body, filename, id, (res) =>
+           if res instanceof Error
+               @next new Error "Invalid DHCP ntpsrv posting!#{res}"
+           else
+               @send res
+               
 
     @get "/network/dhcp/ntpsrv/:id" : ->
        dh.getConfigEntryByID @params.id, (res) =>
@@ -318,16 +270,12 @@ dhcp = require './dhcp'
     @post '/network/dhcp/wins', validateAddressSchema, ->
        instance = dh.new @body
        optionvalue = 'option wins'
-       dh.createConfig optionvalue, @body, (config) =>
-            unless config instanceof Error
-                body = @body
-                dh.writeConfig dhcpfilename, config, instance.id, body, (res) =>
-                     unless res instanceof Error
-                         @send instance
-                     else
-                         @next new Error "Invalid dhcp posting! #{res}"
-            else
-                @next new Error "Invalid config getting! #{config}"
+       dh.createConfig optionvalue, @body, filename, id, (res) =>
+           if res instanceof Error
+               @next new Error "Invalid DHCP wins posting!#{res}"
+           else
+               @send res
+               
 
     @get "/network/dhcp/wins/:id" : ->
        dh.getConfigEntryByID @params.id, (res) =>
