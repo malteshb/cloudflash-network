@@ -49,21 +49,31 @@ addrSchema =
 class dhcp
     constructor:  ->
         console.log 'dhcp initialized'
-        dhcpdb = db.dhcp
+        @dhcpdb = db.dhcp
+        @dhcpdb.on 'load', ->
+            console.log 'loaded dhcp.db'
+            @forEach (key,val) ->
+                console.log 'found ' + key 
 
     # createConfig: Function to create the config from the input JSON
     createConfig: (optionvalue, @body, filename, id, callback) ->
         config = ''
-        for key, val of @body.address
-            switch (typeof val)
-                when "number", "string"
-                   config += optionvalue + ' ' + val + "\n"
-                when "boolean"
-                    config += key + "\n"
-                when "object"
-                    if val instanceof Array
-                        for i in val
+        if optionvalue==""
+          for key, val of @body
+              switch (typeof val)
+                  when "number", "string"
+                     config += key + ' ' + val + "\n"
+                  when "boolean"
+                     config += key + "\n"
+                  when "object"
+                     if val instanceof Array
+                         for i in val
                             config += "#{key} #{i}\n" if key is "option"
+        else
+          for key, val of @body.address
+              switch (typeof val)
+                  when "number", "string"
+                     config += optionvalue + ' ' + val + "\n"
         res = @writeConfig filename, config, id, body
         callback (res)
 
@@ -153,6 +163,27 @@ class dhcp
         else
             callback ({ "id": "invalid" })
 
+    # listConfig: Function to get the list of servers configured
+    listConfig: (optionparam, callback) ->
+        config = {}
+        config.server = optionparam
+        config.address = []
+        @dhcpdb.forEach (key,val) ->
+            if val.optionparam==optionparam
+               j = 0
+               while j < val.address.length
+                    config.address.push (val.address[j])
+                    j++   
+        callback(config)
+
+    # listCompleteConfig: Function to get the entire configuration
+    listCompleteConfig: (callback)->
+        res = {"config":[]}
+        @dhcpdb.forEach (key,val) ->
+            console.log 'found config ' + key
+            res.config.push val
+        callback(res)
+ 
 
 module.exports = dhcp
 module.exports.dhcpSchema = dhcpSchema
