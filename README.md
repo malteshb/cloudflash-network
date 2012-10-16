@@ -13,7 +13,7 @@ cloudflash-network
     <td>GET</td><td>/network/interfaces</td><td>List summary of network interfaces configured</td>
   </tr>
   <tr>
-    <td>POST</td><td>/network/interfaces</td><td>Create network interfaces configuration</td>
+    <td>POST</td><td>/network/interfaces/:id</td><td>Create network interfaces configuration</td>
   </tr>
   <tr>
     <td>GET</td><td>/network/interfaces/:id</td><td>Describes an configured network by ID</td>
@@ -138,77 +138,77 @@ Success: Returns JSON data with list of network configured.
 
 *Response*
 
-```
+    [
+        {
+            "name": "lo",
+            "upstatus": "unknown",
+            "mtu": "16436",
+            "address": "00:00:00:00:00:00",
+            "devtype": "lo"
+        },
+        {
+            "name": "eth0",
+            "upstatus": "up",
+            "mtu": "1500",
+            "address": "8c:89:a5:3d:f1:69",
+            "devtype": "Ether"
+        },
+        {
+            "name": "lxcbr0",
+            "upstatus": "unknown",
+            "mtu": "1500",
+            "address": "da:04:96:0a:6d:44",
+            "devtype": "Ether"
+        },
+        {
+            "name": "virbr0",
+            "upstatus": "down",
+            "mtu": "1500",
+            "address": "fa:d7:02:86:6a:09",
+            "devtype": "Ether"
+        }
+    ]
 
-    {
-        "static": [
-            {
-                "device": "eth0:0",
-                "inetaddr": "192.168.8.139",
-                "netmask": "255.255.255.0",
-                "gateway": ""
-            }
-        ]
-    }
 
-```
 
 Configure Network
 ------------------
 
 
-    Verb  URI	                Description
-    POST	/network/interfaces      Create network interfaces configuration.
+    Verb    URI                     Description
+    POST  /network/interfaces/:id Create network interfaces configuration.
 
 **Example Request and Response**
 
 ### Request JSON
          
     {
-        "static": [
-            {
-                "device": "eth0",
-                "inetaddr": "10.1.15.1",
-                "netmask": "255.255.255.0",
-                "broadcast": "169.254.255.255",
-                "network": "169.254.255.255",
-                "vlan": "vlan4",
-                "hwaddress": "8c:89:a5:3d:f1:69",
-                "gateway": "10.2.56.1",
-                "up": {
-                    "add": [
-                        {
-                            "net": "10.1.15.2",
-                            "netmask": "255.255.255.0",
-                            "gw": "10.1.15.1"
-                         }
-                    ]
-                },
-                "down": {
-                    "del": [
-                        {
-                            "net": "10.1.15.3",
-                            "netmask": "255.255.255.0",
-                            "gw": "10.1.15.4"
-                        }
-                    ]
-                }
-            }
-        ]
+        "static": true,
+        "inetaddr": "10.1.15.1",
+        "broadcast": "169.254.255.255",
+        "network": "169.254.255.255",
+        "vlan": "vlan4",
+        "hwaddress": "8c:89:a5:3d:f1:69",
+        "gateway": "10.2.56.1",
+        "bridge_ports": "all",
+        "bridge_fd": 1234,
+        "bridge_hello": 2,
+        "bridge_maxage": 20,
+        "bridge_stp": "on/off"
     }
-
-### Response JSON
+### Response JSON    
 
     {
-        "result": "success"
+       "result": true
     }
+
 
 
 List a Network 
 --------------
 
-    Verb	URI	                   Description
-    GET	/network/interfaces/:id	 Describes an configured network by name.
+    Verb	URI	                        Description
+    GET	 /network/interfaces/:id     Describes an configured network by name.
 
 
 Note: The request does not require a message body.
@@ -217,24 +217,26 @@ Success: Returns JSON data with list of network configured.
 
 *Response*
 
-```
-
     {
-        "device": "eth0",
-        "status": "active",
-        "txbytes": "72013",
-        "rxbytes": "72013"
+        "config": {
+            "inetaddr": "10.1.15.1",
+            "broadcast": "169.254.255.255",
+            "network": "255.255.255.0",
+            "gateway": "10.1.2.10"
+        },
+        "stats": {
+            "txbytes": "105535067",
+            "rxbytes": "108086167107"
+        },
+        "operstate": "up"
     }
-
-```
-
 
 
 Delete a network
 ----------------
 
-    Verb	  URI	                     Description
-    DELETE /network/interfaces/:id	   Delete an configured network by name.
+    Verb	  URI	                        Description
+    DELETE    /network/interfaces/:id	   Delete an configured network by name.
 
 On Success returns 200 with JSON data
 
@@ -249,8 +251,9 @@ On Success returns 200 with JSON data
 ### Response JSON
 
     {
-        "result": "success"
+       "result": true
     }
+
 
 
 Configure subnet details for DHCP
