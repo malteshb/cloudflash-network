@@ -23,7 +23,6 @@ ifacestatic_err = {"static":  true,"inetaddr": "192.168.8.139", "broadcast":"bro
 
 describe 'Testing network endpoints functions: ', ->
  
- 
   it 'validate network validateIfaceSchema', ->
     result = null
     body = ifacestatic        
@@ -91,7 +90,80 @@ describe 'Testing network endpoints functions: ', ->
        expect(entry).to.have.property('gateway')
        done()
     ), 50
-
+  
+  it 'Test function network getStats function ', (done) ->
+    result = entry = null
+    devName = 'eth0'
+    nwk4 = new iface 
+    setTimeout (->
+       entry = nwk4.getStats devName
+       expect(entry).to.be.an('object')
+       expect(entry).to.have.property('txbytes')
+       expect(entry).to.have.property('rxbytes')       
+       done()
+    ), 50
+  
+  it 'Test function network delete function ', (done) ->
+    result = null
+    params = {}
+    params.id = 'eth0'
+    nwk5 = new iface 
+    nwk5.delete params.id, (res) =>
+      setTimeout (->
+       result = res
+       expect(result).to.eql({result:true})       
+       done()
+      ), 50
+  
+  it 'config Invalid device name test', (done) ->
+    body = result = null
+    body = ifacestatic        
+    nwk6 = new iface     
+    params = {}
+    params.id = 'eth0test'
+ 
+    nwk6.config params.id, body, (res) =>
+      setTimeout (->
+         result = res 
+         console.log "result: " + result   
+         expect(result).to.not.eql({result:true})      
+         done()
+      ), 50
     
-
+  it 'getInfo invalid device name test', (done) ->
+    result = null
+    params = {}
+    params.id = 'eth0test'
+    nwk7 = new iface 
+  
+    nwk7.getInfo params.id, (res) =>
+      setTimeout (->
+         result = res 
+         console.log "result: " + result          
+         result.should.not.be.an('object')                
+         done()
+      ), 50
+  
+  it 'getConfig invalid device name test', (done) ->
+    result = entry = null
+    devName = 'eth0test'
+    nwk8 = new iface 
+    setTimeout (->
+       entry = nwk8.getConfig devName
+       expect(entry).to.eql(undefined) 
+       done()
+    ), 50 
+  
+  it 'delete invalid device name test', (done) ->
+    result = null
+    params = {}
+    params.id = 'eth0test'
+    nwk9 = new iface 
+    nwk9.delete params.id, (res) =>
+      setTimeout (->
+       result = res
+       expect(result).to.not.eql({result:true})       
+       done()
+      ), 50
+ 
  
