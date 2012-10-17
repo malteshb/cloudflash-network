@@ -57,7 +57,6 @@ cloudflash-network
   <tr>
       <td>DELETE</td><td>/network/dhcp/namesvr/:id</td><td>Delete name server details from DHCP by id</td>
   </tr>
-  
   <tr>
       <td>POST</td><td>/network/dhcp/dns</td><td>Update dns details for DHCP in VCG</td>
   </tr>
@@ -109,15 +108,42 @@ cloudflash-network
   <tr>
       <td>GET</td><td>/network/dhcp/wins/:id</td><td>Describe wins server details for DHCP by id</td>
   </tr>
-
   <tr>
       <td>DELETE</td><td>/network/dhcp/wins/:id</td><td>Delete wins server details from DHCP by id</td>
   </tr>
-
   <tr>
       <td>GET</td><td>/network/dhcp/:id</td><td>Show DHCP config info in VCG specified by ID</td>
   </tr>
-
+  <tr>
+      <td>GET</td><td>/network/dhcp/router</td><td>List all the routers configured</td>
+  </tr>
+  <tr>
+      <td>GET</td><td>/network/dhcp/timesvr</td><td>List all time servers configured</td>
+  </tr>
+  <tr>
+      <td>GET</td><td>/network/dhcp/namesvr</td><td>List all name servers configured</td>
+  </tr>
+  <tr>
+      <td>GET</td><td>/network/dhcp/dns</td><td>List all dns servers configured</td>
+  </tr>
+  <tr>
+      <td>GET</td><td>/network/dhcp/logsvr</td><td>List all log servers configured</td>
+  </tr>
+  <tr>
+      <td>GET</td><td>/network/dhcp/cookiesvr</td><td>List all cookie servers configured</td>
+  </tr>
+  <tr>
+      <td>GET</td><td>/network/dhcp/lprsvr</td><td>List all printer servers configured</td>
+  </tr>
+  <tr>
+      <td>GET</td><td>/network/dhcp/ntpsrv</td><td>List all ntp servers configured</td>
+  </tr>
+  <tr>
+      <td>GET</td><td>/network/dhcp/wins</td><td>List all win servers configured</td>
+  </tr>
+  <tr>
+      <td>GET</td><td>/network/dhcp</td><td>Describe DHCP server configuration</td>
+  </tr>
 </table>
 
 
@@ -207,7 +233,7 @@ Configure Network
 List a Network 
 --------------
 
-    Verb	URI	                        Description
+    Verb  URI	                        Description
     GET	 /network/interfaces/:id     Describes an configured network by name.
 
 
@@ -964,7 +990,7 @@ On Success returns 200 with JSON data
 
 
 
-COnfigure lpr server details for DHCP
+Configure lpr server details for DHCP
 -------------------------------------
 
     Verb    URI          	         Description
@@ -1303,3 +1329,291 @@ Please note that the top-level `id` returned above refers to the service-ID.
 
 Upon error, error code 500 will be returned
 
+
+Describe DHCP router information
+---------------------------------
+    Verb URI                        Description
+    GET  /network/dhcp/router 	  Describe router details in DHCP.
+
+
+On Success returns 200 with JSON data
+
+**Example Request and Response**
+
+### Request Headers
+
+    GET  /network/dhcp/router
+    
+### Response JSON
+
+    {
+       "server": "router",
+       "address":
+       [
+           "192.10.0.42",
+           "192.10.0.44"
+       ] 
+    }
+    
+Describe DHCP time server information
+--------------------------------------
+    Verb URI                        Description
+    GET  /network/dhcp/timesvr     Describe time server details in DHCP.
+
+
+On Success returns 200 with JSON data
+
+**Example Request and Response**
+
+### Request Headers
+
+    GET  /network/dhcp/timesvr
+    
+### Response JSON
+
+    {
+       "server": "timesvr",
+       "address":
+       [
+           "192.10.0.42",
+           "192.10.0.44"
+       ] 
+    }
+    
+Describe DHCP name server information
+--------------------------------------
+    Verb URI                        Description
+    GET  /network/dhcp/namesvr     Describe name server details in DHCP.
+
+
+On Success returns 200 with JSON data
+
+**Example Request and Response**
+
+### Request Headers
+
+    GET  /network/dhcp/namesvr
+    
+### Response JSON
+
+    {
+       "server": "namesvr",
+       "address":
+       [
+           "192.10.0.42",
+           "192.10.0.44"
+       ] 
+    }
+    
+Describe DHCP dns server information
+-------------------------------------
+    Verb URI                        Description
+    GET  /network/dhcp/dns     Describe dns server details in DHCP.
+
+
+On Success returns 200 with JSON data
+
+**Example Request and Response**
+
+### Request Headers
+
+    GET  /network/dhcp/dns
+    
+### Response JSON
+
+    {
+       "server": "dns",
+       "address":
+       [
+           "192.10.0.42",
+           "192.10.0.44"
+       ] 
+    }    
+    
+Describe DHCP log server information
+-------------------------------------
+    Verb URI                        Description
+    GET  /network/dhcp/logsvr     Describe log server details in DHCP.
+
+
+On Success returns 200 with JSON data
+
+**Example Request and Response**
+
+### Request Headers
+
+    GET  /network/dhcp/logsvr
+    
+### Response JSON
+
+    {
+       "server": "logsvr",
+       "address":
+       [
+           "192.10.0.42",
+           "192.10.0.44"
+       ] 
+    }  
+    
+Describe DHCP cookie server information
+----------------------------------------
+    Verb URI                        Description
+    GET  /network/dhcp/cookiesvr    Describe cookie server details in DHCP.
+
+
+On Success returns 200 with JSON data
+
+**Example Request and Response**
+
+### Request Headers
+
+    GET  /network/dhcp/cookiesvr
+    
+### Response JSON
+
+    {
+       "server": "cookiesvr",
+       "address":
+       [
+           "192.10.0.42",
+           "192.10.0.44"
+       ] 
+    } 
+    
+Describe DHCP lpr server information
+-----------------------------------------
+    Verb URI                      Description
+    GET  /network/dhcp/lprsvr     Describe lpr server details in DHCP.
+
+
+On Success returns 200 with JSON data
+
+**Example Request and Response**
+
+### Request Headers
+
+    GET  /network/dhcp/lprsvr
+    
+### Response JSON
+
+    {
+       "server": "lprsvr",
+       "address":
+       [
+           "192.10.0.42",
+           "192.10.0.44"
+       ] 
+    }        
+    
+    
+Describe DHCP ntp server information
+-------------------------------------
+    Verb URI                      Description
+    GET  /network/dhcp/ntpsrv     Describe ntp server details in DHCP.
+
+
+On Success returns 200 with JSON data
+
+**Example Request and Response**
+
+### Request Headers
+
+    GET  /network/dhcp/ntpsrv
+    
+### Response JSON
+
+    {
+       "server": "ntpsrv",
+       "address":
+       [
+           "192.10.0.42",
+           "192.10.0.44"
+       ] 
+    }
+    
+Describe DHCP win server information
+-------------------------------------
+    Verb URI                    Description
+    GET  /network/dhcp/wins     Describe win server details in DHCP.
+
+
+On Success returns 200 with JSON data
+
+**Example Request and Response**
+
+### Request Headers
+
+    GET  /network/dhcp/wins
+    
+### Response JSON
+
+    {
+       "server": "wins",
+       "address":
+       [
+           "192.10.0.42",
+           "192.10.0.44"
+       ] 
+    }  
+
+
+Describe DHCP server configuration
+-----------------------------------
+    Verb URI               Description
+    GET  /network/dhcp     Describe DHCP server configuration.
+
+
+On Success returns 200 with JSON data
+
+**Example Request and Response**
+
+### Request Headers
+
+    GET  /network/dhcp
+    
+### Response JSON
+
+    {
+       "config":
+       [
+           {
+               "start": "192.168.0.20",
+               "end": "192.168.0.254",
+               "interface": "eth0",
+               "max_leases": 254,
+               "remaining": "yes",
+               "auto_time": 7200,
+               "decline_time": 3600,
+               "conflict_time": 3600,
+               "offer_time": 60,
+               "min_lease": 60,
+               "lease_file": "/var/lib/misc/udhcpd.leases",
+               "pidfile": "/var/run/udhcpd.pid",
+               "notify_file": "dumpleases",
+               "siaddr": "192.168.0.22",
+               "sname": "zorak",
+               "boot_file": "/var/lib/misc/udhcpd.leases",
+               "option":
+               [
+                   "subnet 192.168.0.25",
+                   "timezone IST"
+               ]
+           },
+           {
+               "optionparam": "router",
+               "address":
+               [
+                   "192.10.0.42",
+                   "192.10.0.43"
+               ]
+           },
+           {
+               "optionparam": "namesvr",
+               "address":
+               [
+                   "192.10.100.1",
+                   "192.10.100.4"
+               ]
+           }
+       ]
+    }    
