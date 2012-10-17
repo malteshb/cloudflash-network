@@ -1,4 +1,5 @@
-validate = require('json-schema').validate
+check = require './checkschema'
+
 interfaces = require './interfaces'
 dhcp = require './dhcp'
 
@@ -8,35 +9,8 @@ dhcp = require './dhcp'
     dh = new dhcp
     filename = "/etc/udhcpd.conf"
   
-    validateIfaceSchema = ->
-        console.log 'in validate schema'
-        console.log @body
-        result = validate @body, interfaces.schema
-        console.log result
-        return @next new Error "Invalid network interface configuration posting!: #{result.errors}" unless result.valid
-        @next()
-
-    # Function to validate the dhcp subnet configuration with dhcpSchema
-    validateDhcpSchema = ->
-        console.log 'in validateDhcpSchema'
-        console.log @body
-        result = validate @body, dhcp.dhcpSchema
-        console.log result
-        return @next new Error "Invalid dhcp configuration posting!: #{result.errors}" unless result.valid
-        @next()
-
-    # Function to validate the addresses with addrSchema
-    validateAddressSchema = ->
-        console.log 'in validateAddressSchema'
-        console.log @body
-        result = validate @body, dhcp.addrSchema
-        console.log result
-        return @next new Error "Invalid dhcp configuration posting!: #{result.errors}" unless result.valid
-        @next()
-
-
-    @post '/network/interfaces/:id', validateIfaceSchema,  ->
-        iface.config @params.id, @body, (res) =>
+    @post '/network/interfaces/:type/:id', check.ifaceSchema,  ->
+        iface.config @params.id, @body, @params.type, (res) =>
             unless res instanceof Error
                 @send res
             else
@@ -50,11 +24,11 @@ dhcp = require './dhcp'
                 @next res
 
     @get "/network/interfaces/:id" : ->
-        iface.getInfo @params.id, (res) =>
-            unless res instanceof Error
-                @send res
-            else
-                @next res
+        res = iface.getInfo @params.id
+        unless res instanceof Error
+            @send res
+        else
+            @next res
 
     @del "/network/interfaces/:id" : ->
         iface.delete @params.id, (res) =>
@@ -64,7 +38,7 @@ dhcp = require './dhcp'
             else
                 @next res
 
-    @post '/network/dhcp/subnet', validateDhcpSchema, ->
+    @post '/network/dhcp/subnet', check.dhcpSchema, ->
        instance = dh.new @body
        optionvalue = '' # no option value for subnet config
        dh.createConfig optionvalue, @body, filename, instance.id, (res) =>
@@ -87,7 +61,7 @@ dhcp = require './dhcp'
         result = dh.removeConfig(id, optionvalue, filename)
         @send result
 
-    @post '/network/dhcp/router', validateAddressSchema, ->
+    @post '/network/dhcp/router', check.addressSchema, ->
        instance = dh.new @body
        optionvalue = 'option router'
        dh.createConfig optionvalue, @body, filename, instance.id, (res) =>
@@ -109,7 +83,7 @@ dhcp = require './dhcp'
         result = dh.removeConfig(id, optionvalue, filename)
         @send result
 
-    @post '/network/dhcp/timesvr', validateAddressSchema, ->
+    @post '/network/dhcp/timesvr', check.addressSchema, ->
        instance = dh.new @body
        optionvalue = 'option timesvr'
        dh.createConfig optionvalue, @body, filename, instance.id, (res) =>
@@ -131,7 +105,7 @@ dhcp = require './dhcp'
         result = dh.removeConfig(id, optionvalue, filename)
         @send result
 
-    @post '/network/dhcp/namesvr', validateAddressSchema, ->
+    @post '/network/dhcp/namesvr', check.addressSchema, ->
        instance = dh.new @body
        optionvalue = 'option namesvr'
        dh.createConfig optionvalue, @body, filename, instance.id, (res) =>
@@ -153,7 +127,7 @@ dhcp = require './dhcp'
         result = dh.removeConfig(id, optionvalue, filename)
         @send result
 
-    @post '/network/dhcp/dns', validateAddressSchema, ->
+    @post '/network/dhcp/dns', check.addressSchema, ->
        instance = dh.new @body
        optionvalue = 'option dns'
        dh.createConfig optionvalue, @body, filename, instance.id, (res) =>
@@ -175,7 +149,7 @@ dhcp = require './dhcp'
         result = dh.removeConfig(id, optionvalue, filename)
         @send result
      
-    @post '/network/dhcp/logsvr', validateAddressSchema, ->
+    @post '/network/dhcp/logsvr', check.addressSchema, ->
        instance = dh.new @body
        optionvalue = 'option logsvr'
        dh.createConfig optionvalue, @body, filename, instance.id, (res) =>
@@ -197,7 +171,7 @@ dhcp = require './dhcp'
         result = dh.removeConfig(id, optionvalue, filename)
         @send result
 
-    @post '/network/dhcp/cookiesvr', validateAddressSchema, ->
+    @post '/network/dhcp/cookiesvr', check.addressSchema, ->
        instance = dh.new @body
        optionvalue = 'option cookiesvr'
        dh.createConfig optionvalue, @body, filename, instance.id, (res) =>
@@ -219,7 +193,7 @@ dhcp = require './dhcp'
         result = dh.removeConfig(id, optionvalue, filename)
         @send result
 
-    @post '/network/dhcp/lprsvr', validateAddressSchema, ->
+    @post '/network/dhcp/lprsvr', check.addressSchema, ->
        instance = dh.new @body
        optionvalue = 'option lprsvr'
        dh.createConfig optionvalue, @body, filename, instance.id, (res) =>
@@ -241,7 +215,7 @@ dhcp = require './dhcp'
         result = dh.removeConfig(id, optionvalue, filename)
         @send result
 
-    @post '/network/dhcp/ntpsrv', validateAddressSchema, ->
+    @post '/network/dhcp/ntpsrv', check.addressSchema, ->
        instance = dh.new @body
        optionvalue = 'option ntpsrv'
        dh.createConfig optionvalue, @body, filename, instance.id, (res) =>
@@ -263,7 +237,7 @@ dhcp = require './dhcp'
         result = dh.removeConfig(id, optionvalue, filename)
         @send result
 
-    @post '/network/dhcp/wins', validateAddressSchema, ->
+    @post '/network/dhcp/wins', check.addressSchema, ->
        instance = dh.new @body
        optionvalue = 'option wins'
        dh.createConfig optionvalue, @body, filename, instance.id, (res) =>
@@ -362,6 +336,6 @@ dhcp = require './dhcp'
             unless res instanceof Error
                 @send res
             else
-                @next new Error "Invalid configuration listing! #{res}"            
+                @next new Error "Invalid configuration listing! #{res}"
 
 

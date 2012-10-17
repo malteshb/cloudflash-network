@@ -4,28 +4,54 @@ validate = require('json-schema').validate
 exec = require('child_process').exec
 
 @db = db =
-    iface: require('dirty') '/tmp/iface.db'    
+    iface: require('dirty') '/tmp/iface.db'
 
-
-#schema to validate incoming JSON      
-ifaceSchema =
-    name: "interface"
+staticSchema =
+    name: "static"
     type: "object"
     additionalProperties: false
     properties:
-        static: {"type":"boolean", "required":false}
-        dhcp: {"type":"boolean", "required":false}
-        inetaddr: {"type":"string", "required":true}
+        address : {"type":"string", "required":true}
+        netmask: {"type":"string", "required":true}
         broadcast: {"type":"string", "required":true}
-        network: {"type":"string", "required":true}
-        vlan: {"type":"string", "required":false}
-        hwaddres: {"type":"string", "required":false}
         gateway: {"type":"string", "required":true}
-        'bridge_ports': {"type":"string", "required":false}
-        'bridge_fd': {"type":"number" , "required":false}
-        'bridge_hello': {"type":"number", "required":false}
-        'bridge_maxage': {"type":"number", "required":false}
-        'bridge_stp': {"type":"string", "required":false}
+        pointtopoint: {"type":"string", "required":false}
+        hwaddres: {"type":"string", "required":false}
+        mtu: {"type":"number", "required":false}
+        up: {"type":"string", "required":false}
+        down: {"type":"string", "required":false}
+
+
+dynamicSchema =
+    name: "dynamic"
+    type: "object"
+    additionalProperties: false
+    properties:
+        hostname: {"type":"string", "required":false}
+        leasehours: {"type":"string", "required":false}
+        leasetime: {"type":"string", "required":false}
+        vendor: {"type":"string", "required":false}
+        client: {"type":"string", "required":false}
+        hwaddres: {"type":"string", "required":false}
+        up: {"type":"string", "required":false}
+        down: {"type":"string", "required":false}
+
+
+tunnelSchema =
+    name: "tunnel"
+    type: "object"
+    additionalProperties: false
+    properties:
+        address: {"type":"string", "required":true}
+        mode: {"type":"string", "required":true}
+        endpoint: {"type":"string", "required":true}
+        dstaddr: {"type":"string", "required":true}
+        local: {"type":"string", "required":false}
+        gateway: {"type":"string", "required":false}
+        ttl: {"type":"string", "required":false}
+        mtu: {"type":"number", "required":false}
+        up: {"type":"string", "required":false}
+        down: {"type":"string", "required":false}
 
 
             
@@ -33,7 +59,7 @@ ifaceSchema =
 class interfaces
     constructor:  ->
         console.log 'networklib initialized'
-        ifdb = db.iface        
+        ifdb = db.iface
 
     getDevType: (type) ->
         res = type
@@ -52,25 +78,26 @@ class interfaces
                 res = "GRE"
         return res
 
+    devExists: (devName) ->
+        ifaces = fileops.readdirSync "/sys/class/net"
+        console.log 'devExists: trying to match ' + devName + ' ifaces are '
+        console.log ifaces
+        exists = false
+        for ifid in ifaces
+            if ifid == devName
+                console.log 'devname matched ' + devName
+                exists = true
+        return exists
+
     list: (callback) ->
         res = []
         ifaces = fileops.readdirSync "/sys/class/net"
         for ifid in ifaces
             iface = {}
-            result = ''
-            #Added replace to trim newline
-            iface.name = ifid
-            result = fileops.readFileSync "/sys/class/net/#{ifid}/operstate"
-            iface.upstatus = result.replace /\n/g, ""
-            result = fileops.readFileSync "/sys/class/net/#{ifid}/mtu"
-            iface.mtu = result.replace /\n/g, ""
-            result = fileops.readFileSync "/sys/class/net/#{ifid}/address"
-            iface.address = result.replace /\n/g, ""
-            type = fileops.readFileSync  "/sys/class/net/#{ifid}/type"
-            typenumber = type.split('\n')
-            iface.devtype = @getDevType(typenumber[0])
-            console.log iface
-            res.push iface
+            result = @getInfo  ifid
+            console.log result
+            res.push result
+
         callback (res)
 
     getConfig: (devName) ->
@@ -84,11 +111,11 @@ class interfaces
     getStats: (devName) ->
         stats = {}
         result = ''
-        console.log 'listing device stats' 
+        console.log 'listing device stats'
         result = fileops.readFileSync "/sys/class/net/#{devName}/statistics/tx_bytes"
-        stats.txbytes = result.replace /\n/g, ""
+        stats.txbytes = result.replace /\n/g, "" unless result instanceof Error
         result = fileops.readFileSync "/sys/class/net/#{devName}/statistics/rx_bytes".replace /\n/g, ""
-        stats.rxbytes =  result.replace /\n/g, ""
+        stats.rxbytes =  result.replace /\n/g, "" unless  result instanceof Error
         return stats
 
 
@@ -109,48 +136,56 @@ class interfaces
             console.log config
         #for now I do not want to mess up my ubuntu system :)    
         fileops.updateFile "/etc/network/interfaces", config
+        '''
         for ifid in ifaces
             console.log 'running ifup on device ' + ifid
             exec "ifup #{ifid}"
+        '''
 
-    config: (devName, body, callback) ->
+    config: (devName, body, type, callback) ->
         exists = 0
-        ifaces = fileops.readdirSync "/sys/class/net"        
+        skip = 0
+        ifaces = fileops.readdirSync "/sys/class/net"
 
+        # currently supporting VLANs only
+        device = devName.split('.')[0]
+        console.log 'device is ' + device
         for ifid in ifaces
-            if ifid == devName then exists = 1
+            if ifid == device then exists = 1
         
-        #return new Error "Invalid Device " + devName + " name posting!" if not exists
-        #Added in try catch to fix the error
-        try
-            throw new Error "Invalid Device " + devName + " name posting!" unless exists            
+        if exists == 0
+            err = new Error "Invalid Device " + devName + " name posting!" unless exists
+            skip = 1
+            callback err
 
-            unless body.static or body.dhcp
-                throw new Error "Invalid config posting. Must be either static or dhcp interface"
+        try unless skip == 1
+
             config = "iface " + devName + " inet "
-            console.log body 
-            '''
-            if body.static
-                config += "static\n"
-            else
-                config += "dhcp\n"
-            '''
+            console.log 'type is ' + type
+            switch type
+                when "static", "dynamic", "tunnel"
+                    config += "#{type}\n"
+                else
+                    throw new Error "Invalid interface method posting! #{type}"
+
             for key, val of body
                 switch (typeof val)
                     when "number", "string"
-                        config += key + ' ' + val + "\n"
+                        config += "  " + key + ' ' + val + "\n"
                     when "boolean"
-                        config += key + "\n"
+                        config += "  " + key + "\n"
 
             console.log 'config is ' + config
             filename = "/config/network/interfaces/#{devName}"
             fileops.createFile filename, (result) =>
                 return new Error "Unable to create configuration file for device: #{devName}!" if result instanceof Error
-                fileops.updateFile filename, config 
+                fileops.updateFile filename, config
                 try
                     db.iface.set devName, body, =>
                         console.log "#{devName} added to network interfaces"
                     @updateConfig()
+                    exec "ifdown #{devName}"
+                    exec "ifup #{devName}"
                     callback({result:true})
 
                 catch err
@@ -159,26 +194,35 @@ class interfaces
         catch err
             callback(err)
 
-
+    # should not fail, return available data
     getInfo: (devName, callback) ->
         # get status, running stats, configuration for the given device
         res = {}
-        result = ''        
+        result = ''
+        console.log 'fetching info for device: ' + devName
+        res.name = devName
         entry = @getConfig devName
-        
-        # Added try catch to fix error
-        try
-            throw new Error "#{devName} does not exist!" unless entry
-            res.config = entry        
+        res.config = entry
+
+        if @devExists(devName)
             res.stats = @getStats devName
-            result = fileops.readFileSync "/sys/class/net/#{devName}/operstate" 
+            console.log 'reading operstate mtu and type '
+            result = fileops.readFileSync "/sys/class/net/#{devName}/operstate"
             res.operstate = result.replace /\n/g, ""
-            callback (res)
-        catch err
-            callback(err)
+            result = fileops.readFileSync "/sys/class/net/#{devName}/mtu"
+            res.mtu = result.replace /\n/g, ""
+            type = fileops.readFileSync  "/sys/class/net/#{devName}/type"
+            typenumber = type.split('\n')
+            devtype = @getDevType(typenumber[0])
+            res.devtype = devtype
+        else
+            res = new Error "Device does not exist! #{devName}"
+
+        return res
 
     delete: (devName, callback) ->
         console.log 'deleting the devname ' + devName
+        exec "ifdown #{devName}"
         fileops.removeFile "/config/network/interfaces/#{devName}", (result) =>
             if result instanceof Error
                 err = new Error "Invalid or unconfigured device posting!: #{devName}"
@@ -188,5 +232,7 @@ class interfaces
                 callback({result:true})
 
 module.exports = interfaces
-module.exports.schema = ifaceSchema
+module.exports.staticSchema = staticSchema
+module.exports.dynamicSchema = dynamicSchema
+module.exports.tunnelSchema = tunnelSchema
 
