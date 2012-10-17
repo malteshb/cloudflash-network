@@ -9,7 +9,7 @@ validateIfaceStaticSchema = (body, callback) ->
     result = validate body, interfaces.staticSchema
     callback result
 
-validateIfacedynamicSchema = (body, callback) ->
+validateIfaceDynamicSchema = (body, callback) ->
     console.log 'in validate schema'
     console.log body
     result = validate body, interfaces.dynamicSchema
