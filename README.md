@@ -13,7 +13,7 @@ cloudflash-network
     <td>GET</td><td>/network/interfaces</td><td>List summary of network interfaces configured</td>
   </tr>
   <tr>
-    <td>POST</td><td>/network/interfaces/:id</td><td>Create network interfaces configuration</td>
+    <td>POST</td><td>/network/interfaces/:type/:id</td><td>Create network interfaces configuration</td>
   </tr>
   <tr>
     <td>GET</td><td>/network/interfaces/:id</td><td>Describes an configured network by ID</td>
@@ -154,8 +154,8 @@ cloudflash-network
  List Network
 --------------
 
-    Verb   URI                 Description
-    GET  /network/interfaces   List summary of network interfaces configured.
+    Verb   URI                   Description
+    GET    /network/interfaces   List summary of network interfaces configured.
 
 
 Note: The request does not require a message body.
@@ -164,36 +164,67 @@ Success: Returns JSON data with list of network configured.
 
 *Response*
 
+    
+
     [
-        {
-            "name": "lo",
-            "upstatus": "unknown",
-            "mtu": "16436",
-            "address": "00:00:00:00:00:00",
-            "devtype": "lo"
-        },
-        {
-            "name": "eth0",
-            "upstatus": "up",
-            "mtu": "1500",
-            "address": "8c:89:a5:3d:f1:69",
-            "devtype": "Ether"
-        },
-        {
-            "name": "lxcbr0",
-            "upstatus": "unknown",
-            "mtu": "1500",
-            "address": "da:04:96:0a:6d:44",
-            "devtype": "Ether"
-        },
-        {
-            "name": "virbr0",
-            "upstatus": "down",
-            "mtu": "1500",
-            "address": "fa:d7:02:86:6a:09",
-            "devtype": "Ether"
-        }
+       {
+           "name": "lo",
+           "stats":
+           {
+               "txbytes": "261688",
+               "rxbytes": "261688"
+           },
+           "operstate": "unknown",
+           "mtu": "16436",
+           "devtype": "lo"
+       },
+       {
+           "name": "eth0",
+           "config":
+           {
+               "address": "192.168.8.139",
+               "netmask": "192.168.8.225",
+               "broadcast": "169.254.255.255",
+               "gateway": "10.2.56.10",
+               "pointtopoint": "cp01",
+               "hwaddres": "82:fe:6e:12:85:41",
+               "mtu": 1500,
+               "up": "yes",
+               "down": "no"
+           },
+           "stats":
+           {
+               "txbytes": "939239",
+               "rxbytes": "26122122"
+           },
+           "operstate": "up",
+           "mtu": "1500",
+           "devtype": "Ether"
+       },
+       {
+           "name": "lxcbr0",
+           "stats":
+           {
+               "txbytes": "63027",
+               "rxbytes": "0"
+           },
+           "operstate": "unknown",
+           "mtu": "1500",
+           "devtype": "Ether"
+       },
+       {
+           "name": "virbr0",
+           "stats":
+           {
+               "txbytes": "0",
+               "rxbytes": "0"
+           },
+           "operstate": "down",
+           "mtu": "1500",
+           "devtype": "Ether"
+       }
     ]
+
 
 
 
@@ -201,27 +232,53 @@ Configure Network
 ------------------
 
 
-    Verb    URI                     Description
-    POST  /network/interfaces/:id Create network interfaces configuration.
+    Verb    URI                            Description
+    POST    /network/interfaces/:type/:id  Create network interfaces configuration.
 
 **Example Request and Response**
 
-### Request JSON
+### Request JSON For Type static
          
     {
-        "static": true,
-        "inetaddr": "10.1.15.1",
+        "address": "192.168.8.139",
+        "netmask": "192.168.8.225",
         "broadcast": "169.254.255.255",
-        "network": "169.254.255.255",
-        "vlan": "vlan4",
-        "hwaddress": "8c:89:a5:3d:f1:69",
-        "gateway": "10.2.56.1",
-        "bridge_ports": "all",
-        "bridge_fd": 1234,
-        "bridge_hello": 2,
-        "bridge_maxage": 20,
-        "bridge_stp": "on/off"
+        "gateway": "10.2.56.10",
+        "pointtopoint": "cp01",
+        "hwaddres": "82:fe:6e:12:85:41",
+        "mtu": 1500,
+        "up": "yes",
+        "down": "no"
     }
+
+### Request JSON For Type dynamic
+    
+    {
+        "hostname": "192.168.8.139",
+        "leasehours": "4",
+        "leasetime": "60",
+        "vendor": "10.2.56.10",
+        "client": "10.2.56.11",
+        "hwaddres": "82:fe:6e:12:85:41",
+        "up": "yes",
+        "down": "no"
+    }
+
+### Request JSON For Type tunnel
+
+    {   
+        "address": "2001:470:1f06:f41::2",
+        "mode":"P2P/server",
+        "endpoint":"209.51.161.14", 
+        "dstaddr":"64",
+        "local": "97.107.134.213",
+        "gateway": "2001:470:1f06:f41::1",
+        "ttl": "64",
+        "mtu": 1500,
+        "up": "yes",
+        "down": "no"
+    }
+
 ### Response JSON    
 
     {
@@ -233,8 +290,8 @@ Configure Network
 List a Network 
 --------------
 
-    Verb  URI	                        Description
-    GET	 /network/interfaces/:id     Describes an configured network by name.
+    Verb    URI                          Description
+    GET   /network/interfaces/:id      Describes an configured network by name.
 
 
 Note: The request does not require a message body.
@@ -243,19 +300,33 @@ Success: Returns JSON data with list of network configured.
 
 *Response*
 
+    
+
     {
-        "config": {
-            "inetaddr": "10.1.15.1",
-            "broadcast": "169.254.255.255",
-            "network": "255.255.255.0",
-            "gateway": "10.1.2.10"
-        },
-        "stats": {
-            "txbytes": "105535067",
-            "rxbytes": "108086167107"
-        },
-        "operstate": "up"
+       "name": "eth0",
+       "config":
+       {
+           "address": "192.168.8.139",
+           "netmask": "192.168.8.225",
+           "broadcast": "169.254.255.255",
+           "gateway": "10.2.56.10",
+           "pointtopoint": "cp01",
+           "hwaddres": "82:fe:6e:12:85:41",
+           "mtu": 1500,
+           "up": "yes",
+           "down": "no"
+       },
+       "stats":
+       {
+           "txbytes": "920143",
+           "rxbytes": "26016521"
+       },
+       "operstate": "up",
+       "mtu": "1500",
+       "devtype": "Ether"
     }
+
+
 
 
 Delete a network
