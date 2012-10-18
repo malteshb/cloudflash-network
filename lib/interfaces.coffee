@@ -131,7 +131,7 @@ class interfaces
         console.log 'loading config on unix system'
         ifaces = fileops.readdirSync "/sys/class/net"
         config = "auto lo \n"
-        config += "iface lo inet static\n"
+        config += "iface lo inet loopback\n"
 
         console.log config
         files = fileops.readdirSync "/config/network/interfaces"
