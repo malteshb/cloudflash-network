@@ -40,7 +40,7 @@ dhcp = require './dhcp'
 
     @post '/network/dhcp/subnet', check.dhcpSchema, ->
        instance = dh.new @body
-       optionvalue = '' # no option value for subnet config
+       optionvalue = 'subnet'
        dh.createConfig optionvalue, @body, filename, instance.id, (res) =>
            if res instanceof Error
                @next new Error "Invalid DHCP subnet posting!#{res}"
@@ -59,8 +59,11 @@ dhcp = require './dhcp'
         id = @params.id
         optionvalue = 'subnet'
         result = dh.removeConfig(id, optionvalue, filename)
-        @send result
-
+        unless result instanceof Error
+            @send result
+        else
+            @next new Error "Failed to delete subnet!#{result}" 
+           
     @post '/network/dhcp/router', check.addressSchema, ->
        instance = dh.new @body
        optionvalue = 'option router'
@@ -75,13 +78,16 @@ dhcp = require './dhcp'
             unless res instanceof Error
                 @send res
             else
-                @next new Error "Invalid dhcp getting! #{res}"
+                @next new Error "Invalid dhcp router getting! #{res}"
 
     @del '/network/dhcp/router/:id', ->
         id = @params.id
         optionvalue = 'option router '
         result = dh.removeConfig(id, optionvalue, filename)
-        @send result
+        unless result instanceof Error
+            @send result
+        else
+            @next new Error "Failed to delete router!#{result}"
 
     @post '/network/dhcp/timesvr', check.addressSchema, ->
        instance = dh.new @body
@@ -97,14 +103,17 @@ dhcp = require './dhcp'
             unless res instanceof Error
                 @send res
             else
-                @next new Error "Invalid dhcp getting! #{res}"
+                @next new Error "Invalid dhcp timesvr getting! #{res}"
 
     @del '/network/dhcp/timesvr/:id', ->
         id = @params.id
         optionvalue = 'option timesvr '
         result = dh.removeConfig(id, optionvalue, filename)
-        @send result
-
+        unless result instanceof Error
+            @send result
+        else
+            @next new Error "Failed to delete timesvr!#{result}"            
+ 
     @post '/network/dhcp/namesvr', check.addressSchema, ->
        instance = dh.new @body
        optionvalue = 'option namesvr'
@@ -119,13 +128,16 @@ dhcp = require './dhcp'
             unless res instanceof Error
                 @send res
             else
-                @next new Error "Invalid dhcp getting! #{res}"
+                @next new Error "Invalid dhcp namesvr getting! #{res}"
 
     @del '/network/dhcp/namesvr/:id', ->
         id = @params.id
         optionvalue = 'option namesvr '
         result = dh.removeConfig(id, optionvalue, filename)
-        @send result
+        unless result instanceof Error
+            @send result
+        else
+            @next new Error "Failed to delete namesvr!#{result}"
 
     @post '/network/dhcp/dns', check.addressSchema, ->
        instance = dh.new @body
@@ -141,14 +153,17 @@ dhcp = require './dhcp'
             unless res instanceof Error
                 @send res
             else
-                @next new Error "Invalid dhcp getting! #{res}"
+                @next new Error "Invalid dhcp dns getting! #{res}"
 
     @del '/network/dhcp/dns/:id', ->
         id = @params.id
         optionvalue = 'option dns '
         result = dh.removeConfig(id, optionvalue, filename)
-        @send result
-     
+        unless result instanceof Error
+            @send result
+        else
+            @next new Error "Failed to delete dns!#{result}"
+
     @post '/network/dhcp/logsvr', check.addressSchema, ->
        instance = dh.new @body
        optionvalue = 'option logsvr'
@@ -163,13 +178,16 @@ dhcp = require './dhcp'
             unless res instanceof Error
                 @send res
             else
-                @next new Error "Invalid dhcp getting! #{res}"
+                @next new Error "Invalid dhcp logsvr getting! #{res}"
 
     @del '/network/dhcp/logsvr/:id', ->
         id = @params.id
         optionvalue = 'option logsvr '
         result = dh.removeConfig(id, optionvalue, filename)
-        @send result
+        unless result instanceof Error
+            @send result
+        else
+            @next new Error "Failed to delete logsvr!#{result}"
 
     @post '/network/dhcp/cookiesvr', check.addressSchema, ->
        instance = dh.new @body
@@ -185,13 +203,16 @@ dhcp = require './dhcp'
             unless res instanceof Error
                 @send res
             else
-                @next new Error "Invalid dhcp getting! #{res}"
+                @next new Error "Invalid dhcp cookiesvr getting! #{res}"
 
     @del '/network/dhcp/cookiesvr/:id', ->
         id = @params.id
         optionvalue = 'option cookiesvr '
         result = dh.removeConfig(id, optionvalue, filename)
-        @send result
+        unless result instanceof Error
+            @send result
+        else
+            @next new Error "Failed to delete cookiesvr!#{result}"
 
     @post '/network/dhcp/lprsvr', check.addressSchema, ->
        instance = dh.new @body
@@ -207,13 +228,16 @@ dhcp = require './dhcp'
             unless res instanceof Error
                 @send res
             else
-                @next new Error "Invalid dhcp getting! #{res}"
+                @next new Error "Invalid dhcp lprsvr getting! #{res}"
 
     @del '/network/dhcp/lprsvr/:id', ->
         id = @params.id
         optionvalue = 'option lprsvr '
         result = dh.removeConfig(id, optionvalue, filename)
-        @send result
+        unless result instanceof Error
+            @send result
+        else
+            @next new Error "Failed to delete lprsvr!#{result}"
 
     @post '/network/dhcp/ntpsrv', check.addressSchema, ->
        instance = dh.new @body
@@ -235,7 +259,10 @@ dhcp = require './dhcp'
         id = @params.id
         optionvalue = 'option ntpsrv '
         result = dh.removeConfig(id, optionvalue, filename)
-        @send result
+        unless result instanceof Error
+            @send result
+        else
+            @next new Error "Failed to delete ntpsrv!#{result}"
 
     @post '/network/dhcp/wins', check.addressSchema, ->
        instance = dh.new @body
@@ -251,13 +278,16 @@ dhcp = require './dhcp'
             unless res instanceof Error
                 @send res
             else
-                @next new Error "Invalid dhcp getting! #{res}"
+                @next new Error "Invalid dhcp wins getting! #{res}"
 
     @del '/network/dhcp/wins/:id', ->
         id = @params.id
         optionvalue = 'option wins '
         result = dh.removeConfig(id, optionvalue, filename)
-        @send result
+        unless result instanceof Error
+            @send result
+        else
+            @next new Error "Failed to delete wins!#{result}"
 
     @get '/network/dhcp/router' : ->
         option="router"
@@ -265,7 +295,7 @@ dhcp = require './dhcp'
             unless res instanceof Error
                 @send res
             else
-                @next new Error "Invalid servers listing! #{res}"
+                @next new Error "Invalid routers listing! #{res}"
 
     @get '/network/dhcp/timesvr' : ->
         option="timesvr"
@@ -273,7 +303,7 @@ dhcp = require './dhcp'
             unless res instanceof Error
                 @send res
             else
-                @next new Error "Invalid servers listing! #{res}"
+                @next new Error "Invalid time servers listing! #{res}"
 
     @get '/network/dhcp/namesvr' : ->
         option="namesvr"
@@ -281,7 +311,7 @@ dhcp = require './dhcp'
             unless res instanceof Error
                 @send res
             else
-                @next new Error "Invalid servers listing! #{res}"
+                @next new Error "Invalid name servers listing! #{res}"
 
     @get '/network/dhcp/dns' : ->
         option="dns"
@@ -289,7 +319,7 @@ dhcp = require './dhcp'
             unless res instanceof Error
                 @send res
             else
-                @next new Error "Invalid servers listing! #{res}"
+                @next new Error "Invalid dns servers listing! #{res}"
 
     @get '/network/dhcp/logsvr' : ->
         option="logsvr"
@@ -297,7 +327,7 @@ dhcp = require './dhcp'
             unless res instanceof Error
                 @send res
             else
-                @next new Error "Invalid servers listing! #{res}"
+                @next new Error "Invalid log servers listing! #{res}"
 
     @get '/network/dhcp/cookiesvr' : ->
         option="cookiesvr"
@@ -305,7 +335,7 @@ dhcp = require './dhcp'
             unless res instanceof Error
                 @send res
             else
-                @next new Error "Invalid servers listing! #{res}"
+                @next new Error "Invalid cookie servers listing! #{res}"
 
     @get '/network/dhcp/lprsvr' : ->
         option="lprsvr"
@@ -313,7 +343,7 @@ dhcp = require './dhcp'
             unless res instanceof Error
                 @send res
             else
-                @next new Error "Invalid servers listing! #{res}"
+                @next new Error "Invalid lpr servers listing! #{res}"
 
     @get '/network/dhcp/ntpsrv' : ->
         option="ntpsrv"
@@ -321,7 +351,7 @@ dhcp = require './dhcp'
             unless res instanceof Error
                 @send res
             else
-                @next new Error "Invalid servers listing! #{res}"
+                @next new Error "Invalid ntp servers listing! #{res}"
 
     @get '/network/dhcp/wins' : ->
         option="wins"
@@ -329,13 +359,13 @@ dhcp = require './dhcp'
             unless res instanceof Error
                 @send res
             else
-                @next new Error "Invalid servers listing! #{res}"
+                @next new Error "Invalid win servers listing! #{res}"
 
     @get '/network/dhcp' : ->
         dh.listCompleteConfig (res) =>
             unless res instanceof Error
                 @send res
             else
-                @next new Error "Invalid configuration listing! #{res}"
+                @next new Error "Invalid dhcp configuration listing! #{res}"
 
 

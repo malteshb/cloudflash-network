@@ -58,7 +58,7 @@ class dhcp
     # createConfig: Function to create the config from the input JSON
     createConfig: (optionvalue, @body, filename, id, callback) ->
         config = ''
-        if optionvalue==""
+        if optionvalue=="subnet"
           for key, val of @body
               switch (typeof val)
                   when "number", "string"
@@ -84,23 +84,23 @@ class dhcp
                fs.createWriteStream(filename, flags: "a").write config
            else
                fileops.createFile filename, (result) ->
-                  return result if result instanceof Error
-
-               fileops.updateFile filename, config, (result) ->
-                  return result if result instanceof Error
-        try
-           db.dhcp.set id, body, ->
-              console.log "#{id} added to dhcp service configuration"
-           return ({result:true})
-        catch err
-           console.log err
-           return err
+                  return new Error "Unable to create configuration file for id: #{id}!" if result instanceof Error
+                  fileops.updateFile filename, config, (result) ->
+                      return new Error "Unable to update configuration file for id: #{id}!" if result instanceof Error
+           try
+              db.dhcp.set id, body, ->
+                console.log "#{id} added to dhcp service configuration"
+                return ({result:true})
+           catch err
+              console.log err
+              return err
 
     # removeConfig: Function to remove configuration with given id
     removeConfig: (id, optionvalue, filename) ->
         entry = db.dhcp.get id
         if !entry
-            return { "deleted" : "no data to delete"}
+            return new Error "invalid post for id: #{id}!"  
+
         configList = []
         if optionvalue=='subnet'
           optionvalue = ''
@@ -116,9 +116,10 @@ class dhcp
                             configList.push(config)
         else
           configList = entry.address
+
         newconfig = ''
         fileops.readFile filename, (result) ->
-            throw new Error result if result instanceof Error
+            return new Error "Unable to read configuration file for id: #{id}!" if result instanceof Error
             for line in result.toString().split '\n'
                 j = 0
                 skipflag = 0
@@ -132,18 +133,18 @@ class dhcp
                        j++
                 if skipflag == 0
                    newconfig += line + '\n'
+
+            fileops.createFile filename, (result) ->
+               return new Error "Unable to create configuration file for id: #{id}!" if result instanceof Error
+               fileops.updateFile filename, newconfig, (result) ->
+                  return new Error "Unable to update configuration file for id: #{id}!" if result instanceof Error
             try
                db.dhcp.rm id, ->
                   console.log "removed config id: #{id}"
             catch err
-               return { "deleted" : "failed"}
+               return err
 
-            fileops.createFile filename, (result) ->
-                return result if result instanceof Error
-
-            fileops.updateFile filename, newconfig, (result) ->
-                return result if result instanceof Error
-        return { "deleted" : "success"}
+            return { "deleted" : "success"}
 
     # new: Function to create a new instance of uuid
     new: (config) ->
@@ -161,7 +162,8 @@ class dhcp
             instance.config = entry
             callback( instance )
         else
-            callback ({ "id": "invalid" })
+            error = new Error "invalid posted id : #{id}!"
+            callback (error)
 
     # listConfig: Function to get the list of servers configured
     listConfig: (optionparam, callback) ->
