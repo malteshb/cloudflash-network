@@ -5,6 +5,7 @@ exec = require('child_process').exec
 
 @db = db =
     iface: require('dirty') '/tmp/iface.db'
+    ifaceAlias: require('dirty') '/tmp/ifacealias.db'
 
 staticSchema =
     name: "static"
@@ -98,6 +99,13 @@ class interfaces
             console.log result
             res.push result
 
+        db.ifaceAlias.forEach (key,val) ->
+            result = {}
+            console.log 'found key ' + key + ' value is ' + val
+            result.name = key
+            result.config = val
+            res.push result
+
         callback (res)
 
     getConfig: (devName) ->
@@ -122,11 +130,8 @@ class interfaces
     updateConfig: ->
         console.log 'loading config on unix system'
         ifaces = fileops.readdirSync "/sys/class/net"
-        config = "auto "
-        for ifid in ifaces
-            config += ifid
-            config += " "
-        config += "\n"
+        config = "auto lo \n"
+        config += "iface lo inet static\n"
 
         console.log config
         files = fileops.readdirSync "/config/network/interfaces"
@@ -134,7 +139,6 @@ class interfaces
         for file in files
             config += fileops.readFileSync "/config/network/interfaces/#{file}"
             console.log config
-        #for now I do not want to mess up my ubuntu system :)    
         fileops.updateFile "/etc/network/interfaces", config
         '''
         for ifid in ifaces
@@ -147,8 +151,8 @@ class interfaces
         skip = 0
         ifaces = fileops.readdirSync "/sys/class/net"
 
-        # currently supporting VLANs only
-        device = devName.split('.')[0]
+        devicev = devName.split('.')[0]
+        device = devName.split(':')[0]
         console.log 'device is ' + device
         for ifid in ifaces
             if ifid == device then exists = 1
@@ -183,10 +187,18 @@ class interfaces
                 try
                     db.iface.set devName, body, =>
                         console.log "#{devName} added to network interfaces"
+                    console.log 'device is ' + device + ' devicev is ' + devicev
+                    unless device == devicev
+                        db.ifaceAlias.set devName, body, =>
+                            console.log "Alias #{devName} added to network interfaces"
                     @updateConfig()
-                    exec "ifdown #{devName}"
-                    exec "ifup #{devName}"
-                    callback({result:true})
+                    exec "ifdown #{devName}; ifup #{devName}", (error, stdout, stderror) =>
+                        console.log error
+
+                    res = {}
+                    res.name = devName
+                    res.config = @getConfig devName
+                    callback(res)
 
                 catch err
                     console.log err
@@ -195,15 +207,16 @@ class interfaces
             callback(err)
 
     # should not fail, return available data
-    getInfo: (devName, callback) ->
+    getInfo: (deviceName, callback) ->
         # get status, running stats, configuration for the given device
         res = {}
         result = ''
-        console.log 'fetching info for device: ' + devName
-        res.name = devName
-        entry = @getConfig devName
+        console.log 'fetching info for device: ' + deviceName
+        res.name = deviceName
+        entry = @getConfig deviceName
         res.config = entry
 
+        devName = deviceName.split(':')[0]
         if @devExists(devName)
             res.stats = @getStats devName
             console.log 'reading operstate mtu and type '
@@ -223,12 +236,16 @@ class interfaces
     delete: (devName, callback) ->
         console.log 'deleting the devname ' + devName
         exec "ifdown #{devName}"
+        fileops.fileExists "/proc/sys/net/vlan/config/#{devName}", (res) =>
+            exec "vconfig rem #{devName}" unless res instanceof Error
+
         fileops.removeFile "/config/network/interfaces/#{devName}", (result) =>
             if result instanceof Error
                 err = new Error "Invalid or unconfigured device posting!: #{devName}"
                 callback(err)
             else
                 @updateConfig()
+                db.iface.rm devName
                 callback({result:true})
 
 module.exports = interfaces

@@ -34,7 +34,7 @@ dhcp = require './dhcp'
         iface.delete @params.id, (res) =>
             console.log res
             unless res instanceof Error
-                @send res
+                @send res, 204
             else
                 @next res
 
