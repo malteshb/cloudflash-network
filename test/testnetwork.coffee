@@ -26,10 +26,15 @@ ifacestatic_err = { "netmask":"192.168.8.225","broadcast":"169.254.255.255", "ga
 ifacedynamic_err = { "hostname": 39,"leasehours":"4","leasetime":"60","vendor":"10.2.56.10","client": "10.2.56.11","hwaddres": "82:fe:6e:12:85:41","up": "yes","down": "no"}
 ifacetunnel_err = {"address": "2001:470:1f06:f41::2","mode":"P2P/server","endpoint":"209.51.161.14","dstaddr":"64","local": "97.107.134.213","gateway": "2001:470:1f06:f41::1","ttl": 64,"mtu": 1500,"up": "yes","down": "no"}
 
+dhcpconfig = {"start": "192.168.0.20", "end": "192.168.0.254", "interface": "eth0", "max_leases": 254, "remaining": "yes", "auto_time": 7200, "decline_time": 3600, "conflict_time": 3600, "offer_time": 60, "min_lease": 60, "lease_file": "/var/lib/misc/udhcpd.leases", "pidfile": "/var/run/udhcpd.pid", "notify_file": "dumpleases", "siaddr": "192.168.0.22", "sname": "zorak", "boot_file": "/var/lib/misc/udhcpd.leases", "option": ["subnet 192.168.0.25", "timezone IST"]}
 
+dhcpconfig_err = {"interface": "eth0", "max_leases": 254, "remaining": "yes", "auto_time": 7200, "decline_time": 3600, "conflict_time": 3600, "offer_time": 60, "min_lease": 60, "lease_file": "/var/lib/misc/udhcpd.leases", "pidfile": "/var/run/udhcpd.pid", "notify_file": "dumpleases", "siaddr": "192.168.0.22", "sname": "zorak", "boot_file": "/var/lib/misc/udhcpd.leases", "option": ["subnet 192.168.0.25", "timezone IST"]}
+
+addressconfig = {"optionparam": "router", "address": ["192.10.0.40", "192.10.0.41"]}
+
+addressconfig_err = {"optionparam": 1234, "address": ["192.10.0.40", "192.10.0.41"]}
 
 describe 'Testing network endpoints functions: ', ->
-  
   it 'validate network validateIfaceStaticSchema', ->
     result = null
     body = ifacestatic        
@@ -200,5 +205,110 @@ describe 'Testing network endpoints functions: ', ->
        done()
       ), 50
   
+  it 'validate dhcp validateDhcpSchema', ->
+    result = null
+    body = dhcpconfig
+    result = validate body, dhcp.dhcpSchema
+    expect(result).to.eql({ valid: true, errors: [] })
  
- 
+  it 'invalid dhcp validateDhcpSchema', ->
+    result = null
+    body = dhcpconfig_err
+    result = validate body, dhcp.dhcpSchema
+    expect(result).to.not.eql({ valid: true, errors: [] })
+
+  it 'validate dhcp validateAddressSchema', ->
+    result = null
+    body = addressconfig
+    result = validate body, dhcp.addrSchema
+    expect(result).to.eql({ valid: true, errors: [] })
+
+  it 'invalid dhcp validateAddressSchema', ->
+    result = null
+    body = addressconfig_err
+    result = validate body, dhcp.addrSchema
+    expect(result).to.not.eql({ valid: true, errors: [] })
+
+  it 'Test function network new function ', (done) ->
+    result = null
+    body = addressconfig
+    dh1 = new dhcp
+    setTimeout (->
+       result = dh1.new body
+       expect(result).to.be.an('object')
+       expect(result).to.have.property('id')
+       expect(result).to.have.property('config')
+       done()
+    ), 50
+
+  it 'invalid new test', (done) ->
+    result = null
+    body = {} 
+    dh2 = new dhcp
+    setTimeout (->
+       result = dh2.new body
+       console.log "result: " + result
+       expect(result).to.have.property('id')
+       expect(result).to.have.property('config')
+       done()
+      ), 50
+
+  it 'Test function network listConfig function ', (done) ->
+    result = null
+    option = "router"
+    dh3 = new dhcp
+    dh3.listConfig option, (res) =>
+      setTimeout (->
+         result = res
+         console.log "result: " + result
+         expect(result).to.have.property('server')
+         expect(result).to.have.property('address')
+         done()
+       ), 50
+
+  it 'listConfig invalid option test', (done) ->
+    result = null
+    option = "routertest"
+    dh4 = new dhcp
+    dh4.listConfig option, (res) =>
+      setTimeout (->
+         result = res
+         console.log "result: " + result
+         expect(result).to.have.property('server')
+         expect(result).to.have.property('address')
+         done()
+      ), 50
+
+  it 'Test function network getConfigEntryByID function ', (done) ->
+    result = null
+    params = {}
+    params.id = '64c31e08-92ad-4e39-ab22-825e8ab98de1'
+    dh5 = new dhcp
+    dh5.getConfigEntryByID params.id, (res) =>
+      setTimeout (->
+         result = res
+         console.log "result: " + result
+         expect(result).to.have.property('id')
+         expect(result).to.have.property('config')
+         done()
+       ), 50
+
+  it 'getConfigEntryByID invalid id test', (done) ->
+    result = null
+    params = {}
+    params.id = '1234567'
+    dh6 = new dhcp
+    dh6.getConfigEntryByID params.id, (res) =>
+      setTimeout (->
+         result = res
+         console.log "result: " + result
+         expect(result).to.eql({ "id": "invalid" })
+         done()
+      ), 50
+
+
+
+
+
+
+
