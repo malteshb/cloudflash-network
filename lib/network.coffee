@@ -58,7 +58,7 @@ dhcp = require './dhcp'
         console.log 'inside /network/dhcp/subnet/:id' 
         id = @params.id
         optionvalue = 'subnet'
-        result = dh.removeConfig(id, optionvalue, filename)
+        result = dh.removeConfig id, optionvalue, filename
         unless result instanceof Error
             @send result
         else
@@ -83,7 +83,7 @@ dhcp = require './dhcp'
     @del '/network/dhcp/router/:id', ->
         id = @params.id
         optionvalue = 'option router '
-        result = dh.removeConfig(id, optionvalue, filename)
+        result = dh.removeConfig id, optionvalue, filename
         unless result instanceof Error
             @send result
         else
@@ -108,7 +108,7 @@ dhcp = require './dhcp'
     @del '/network/dhcp/timesvr/:id', ->
         id = @params.id
         optionvalue = 'option timesvr '
-        result = dh.removeConfig(id, optionvalue, filename)
+        result = dh.removeConfig id, optionvalue, filename
         unless result instanceof Error
             @send result
         else
@@ -133,7 +133,7 @@ dhcp = require './dhcp'
     @del '/network/dhcp/namesvr/:id', ->
         id = @params.id
         optionvalue = 'option namesvr '
-        result = dh.removeConfig(id, optionvalue, filename)
+        result = dh.removeConfig id, optionvalue, filename
         unless result instanceof Error
             @send result
         else
@@ -158,7 +158,7 @@ dhcp = require './dhcp'
     @del '/network/dhcp/dns/:id', ->
         id = @params.id
         optionvalue = 'option dns '
-        result = dh.removeConfig(id, optionvalue, filename)
+        result = dh.removeConfig id, optionvalue, filename
         unless result instanceof Error
             @send result
         else
@@ -183,7 +183,7 @@ dhcp = require './dhcp'
     @del '/network/dhcp/logsvr/:id', ->
         id = @params.id
         optionvalue = 'option logsvr '
-        result = dh.removeConfig(id, optionvalue, filename)
+        result = dh.removeConfig id, optionvalue, filename
         unless result instanceof Error
             @send result
         else
@@ -208,7 +208,7 @@ dhcp = require './dhcp'
     @del '/network/dhcp/cookiesvr/:id', ->
         id = @params.id
         optionvalue = 'option cookiesvr '
-        result = dh.removeConfig(id, optionvalue, filename)
+        result = dh.removeConfig id, optionvalue, filename
         unless result instanceof Error
             @send result
         else
@@ -233,7 +233,7 @@ dhcp = require './dhcp'
     @del '/network/dhcp/lprsvr/:id', ->
         id = @params.id
         optionvalue = 'option lprsvr '
-        result = dh.removeConfig(id, optionvalue, filename)
+        result = dh.removeConfig id, optionvalue, filename
         unless result instanceof Error
             @send result
         else
@@ -258,7 +258,7 @@ dhcp = require './dhcp'
     @del '/network/dhcp/ntpsrv/:id', ->
         id = @params.id
         optionvalue = 'option ntpsrv '
-        result = dh.removeConfig(id, optionvalue, filename)
+        result = dh.removeConfig id, optionvalue, filename
         unless result instanceof Error
             @send result
         else
@@ -283,7 +283,7 @@ dhcp = require './dhcp'
     @del '/network/dhcp/wins/:id', ->
         id = @params.id
         optionvalue = 'option wins '
-        result = dh.removeConfig(id, optionvalue, filename)
+        result = dh.removeConfig id, optionvalue, filename
         unless result instanceof Error
             @send result
         else

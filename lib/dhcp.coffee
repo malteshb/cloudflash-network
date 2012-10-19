@@ -57,7 +57,8 @@ class dhcp
 
     # createConfig: Function to create the config from the input JSON
     createConfig: (optionvalue, @body, filename, id, callback) ->
-        config = ''
+       config = ''
+       if optionvalue
         if optionvalue=="subnet"
           for key, val of @body
               switch (typeof val)
@@ -76,6 +77,9 @@ class dhcp
                      config += optionvalue + ' ' + val + "\n"
         res = @writeConfig filename, config, id, body
         callback (res)
+       else
+        error = new Error 'optionvalue is not valid'
+        callback (error)
 
     # writeConfig: Function to add/modify configuration and update the dhcp db with id 
     writeConfig: (filename, config, id, body) ->
@@ -171,7 +175,7 @@ class dhcp
         config.server = optionparam
         config.address = []
         @dhcpdb.forEach (key,val) ->
-            if val.optionparam==optionparam
+            if val and val.optionparam == optionparam
                j = 0
                while j < val.address.length
                     config.address.push (val.address[j])
