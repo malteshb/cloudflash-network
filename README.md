@@ -63,8 +63,11 @@ Success: Returns JSON data with list of network configured.
                "pointtopoint": "cp01",
                "hwaddres": "82:fe:6e:12:85:41",
                "mtu": 1500,
-               "up": "yes",
-               "down": "no"
+               "post-up":
+               [
+                   "route add -net 10.10.10.0/24 gw 192.168.8.1"
+               ]
+
            },
            "stats":
            {
@@ -121,8 +124,7 @@ Configure Network
         "pointtopoint": "cp01",
         "hwaddres": "82:fe:6e:12:85:41",
         "mtu": 1500,
-        "up": "yes",
-        "down": "no"
+        "post-up": ["route add -net 10.10.10.0/24 gw 192.168.8.1 "]        
     }
 
 ### Request JSON For Type dynamic
@@ -134,8 +136,7 @@ Configure Network
         "vendor": "10.2.56.10",
         "client": "10.2.56.11",
         "hwaddres": "82:fe:6e:12:85:41",
-        "up": "yes",
-        "down": "no"
+        "post-up": ["route add -net 10.10.10.0/24 gw 192.168.8.1"]
     }
 
 ### Request JSON For Type tunnel
@@ -149,8 +150,7 @@ Configure Network
         "gateway": "2001:470:1f06:f41::1",
         "ttl": "64",
         "mtu": 1500,
-        "up": "yes",
-        "down": "no"
+        "post-up": ["route add -net 10.10.10.0/24 gw 192.168.8.1"]
     }
 
 ### Response JSON    
@@ -187,8 +187,10 @@ Success: Returns JSON data with list of network configured.
            "pointtopoint": "cp01",
            "hwaddres": "82:fe:6e:12:85:41",
            "mtu": 1500,
-           "up": "yes",
-           "down": "no"
+           "post-up":
+           [
+               "route add -net 10.10.10.0/24 gw 192.168.8.1 "
+           ]
        },
        "stats":
        {

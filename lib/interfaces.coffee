@@ -19,8 +19,20 @@ staticSchema =
         pointtopoint: {"type":"string", "required":false}
         hwaddres: {"type":"string", "required":false}
         mtu: {"type":"number", "required":false}
-        up: {"type":"string", "required":false}
-        down: {"type":"string", "required":false}
+        up: 
+           items: { type: "string", "required":false }
+        down: 
+           items: { type: "string", "required":false }
+        'post-up': 
+           items: { type: "string", "required":false }
+        'post-down': 
+           items: { type: "string", "required":false }
+        'pre-up': 
+           items: { type: "string", "required":false }
+        'pre-down': 
+           items: { type: "string", "required":false }
+
+
 
 
 dynamicSchema =
@@ -34,8 +46,18 @@ dynamicSchema =
         vendor: {"type":"string", "required":false}
         client: {"type":"string", "required":false}
         hwaddres: {"type":"string", "required":false}
-        up: {"type":"string", "required":false}
-        down: {"type":"string", "required":false}
+        up: 
+           items: { type: "string", "required":false }
+        down: 
+           items: { type: "string", "required":false }
+        'post-up': 
+           items: { type: "string", "required":false }
+        'post-down': 
+           items: { type: "string", "required":false }
+        'pre-up': 
+           items: { type: "string", "required":false }
+        'pre-down': 
+           items: { type: "string", "required":false }
 
 
 tunnelSchema =
@@ -51,8 +73,18 @@ tunnelSchema =
         gateway: {"type":"string", "required":false}
         ttl: {"type":"string", "required":false}
         mtu: {"type":"number", "required":false}
-        up: {"type":"string", "required":false}
-        down: {"type":"string", "required":false}
+        up: 
+           items: { type: "string", "required":false }
+        down: 
+           items: { type: "string", "required":false }
+        'post-up': 
+           items: { type: "string", "required":false }
+        'post-down': 
+           items: { type: "string", "required":false }
+        'pre-up': 
+           items: { type: "string", "required":false }
+        'pre-down': 
+           items: { type: "string", "required":false }
 
 
             
@@ -174,6 +206,12 @@ class interfaces
 
             for key, val of body
                 switch (typeof val)
+                    when "object"
+                      if val instanceof Array
+                        for i in val
+                          switch key
+                            when "post-up", "post-down", "pre-up", "pre-down", "up", "down"  
+                              config += "  " + key + ' ' + i + "\n"                            
                     when "number", "string"
                         config += "  " + key + ' ' + val + "\n"
                     when "boolean"
