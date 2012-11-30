@@ -113,10 +113,6 @@ vlanSchema =
            items: { type: "string", "required":false }
         'pre-down': 
            items: { type: "string", "required":false }
-
-
-
-
             
 
 class interfaces
@@ -201,19 +197,14 @@ class interfaces
         for file in files
             config += fileops.readFileSync "/config/network/interfaces/#{file}"
             #console.log config
-        fileops.updateFile "/etc/network/interfaces_test", config
+        fileops.updateFile "/etc/network/interfaces", config
         '''
         for ifid in ifaces
             console.log 'running ifup on device ' + ifid
             exec "ifup #{ifid}"
         '''
-
-    config: (devName, body,vlanid, callback) ->
-        exists = 0
-        skip = 0
-        ifaces = fileops.readdirSync "/sys/class/net"
-        
-        # To find type static/dynamic/tunnel
+    # To find type static/dynamic/tunnel/vlan
+    getType : (body) ->
         type = ''
         for key, val of body      
           switch (key)
@@ -227,7 +218,56 @@ class interfaces
               when "dhcp"
                 type = "dynamic"
               when "vlan"
-                type = "vlan"     
+                type = "vlan"
+        return type
+    
+    generateConfig: (type,devName,configStatic,staticDevName, vlanid) ->
+        config = ''
+        if type == "static"               
+            config = "iface " + devName + " inet "
+            config += "#{type}\n"
+            config += "  " + "address 169.254.255.254\n"
+            config += configStatic + "\n"
+            i = 1
+            for staticDev in staticDevName                
+              console.log 'staticDev: ' + staticDev
+              config += "iface " + "#{devName}:#{i}" + " inet "
+              config += "#{type}\n"
+              config += "  " + "address #{staticDev}\n" 
+              config += configStatic + "\n"               
+              i = i + 1
+              console.log "i is : " + i
+
+        else if type == "vlan"
+            if vlanid
+              config = "auto #{devName}.#{vlanid} \n"
+              config += "iface #{devName}.#{vlanid} inet static \n"
+              config += configStatic 
+              config += "  " +"vlan-raw-device #{devName} \n"  
+                              
+            else
+              throw new Error "Invalid vlan id"
+        else
+            config = "iface " + devName + " inet "           
+            console.log 'type is ' + type
+            switch type
+              when "tunnel"
+                  config += "#{type}\n"
+              when "dynamic"
+                  config += "dhcp\n"                
+              else
+                  throw new Error "Invalid interface method posting! #{type}"  
+            config += configStatic + "\n"
+        #console.log ' config in fun : ' + config
+        return config     
+
+    config: (devName, body,vlanid, callback) ->
+        exists = 0
+        skip = 0
+        type = ''
+        ifaces = fileops.readdirSync "/sys/class/net"  
+       
+        type = @getType body     
         
         console.log 'type is: ' + type
         devicev = devName.split('.')[0]
@@ -261,48 +301,11 @@ class interfaces
                     when "boolean"
                         configStatic += "  " + key + "\n"
 
-            if type == "static"              
-               
-              config = "iface " + devName + " inet "
-              config += "#{type}\n"
-              config += "  " + "address 169.254.255.254\n"
-              config += configStatic + "\n"
-              i = 1
-              for staticDev in staticDevName                
-                console.log 'staticDev: ' + staticDev
-                config += "iface " + "#{devName}:#{i}" + " inet "
-                config += "#{type}\n"
-                config += "  " + "address #{staticDev}\n" 
-                config += configStatic + "\n"               
-                i = i + 1
-                console.log "i is : " + i
-
-            else if type == "vlan"
-              if vlanid
-                config = "auto vlan#{vlanid} \n"
-                config += "iface vlan#{vlanid} inet static \n"
-                config += configStatic 
-                config += "  " +"vlan-raw-device #{devName} \n"
-                devName = devName + '.' + vlanid
-              else
-                throw new Error "Invalid vlan id"
-                
-
-            else
-
-              config = "iface " + devName + " inet "            
+            config = @generateConfig type, devName, configStatic, staticDevName, vlanid
             
-              console.log 'type is ' + type
-              switch type
-                when "tunnel"
-                    config += "#{type}\n"
-                when "dynamic"
-                    config += "dhcp\n"                
-                else
-                    throw new Error "Invalid interface method posting! #{type}"  
-              config += configStatic + "\n"
-            
-            console.log 'config is ' + config
+            console.log 'config is : ' + config
+            if type == 'vlan'
+              devName = devName + '.' + vlanid
             filename = "/config/network/interfaces/#{devName}"
             fileops.createFile filename, (result) =>
                 return new Error "Unable to create configuration file for device: #{devName}!" if result instanceof Error
@@ -326,9 +329,9 @@ class interfaces
                 catch err
                     console.log err
                     callback(err)
-
+        
         catch err
-            callback(err)
+            callback(err)        
 
     # should not fail, return available data
     getInfo: (deviceName, callback) ->
@@ -356,6 +359,7 @@ class interfaces
             res = new Error "Device does not exist! #{devName}"
 
         return res
+
     getVlanInfo: (deviceName, callback) ->
         res = {}
         result = ''
@@ -363,22 +367,37 @@ class interfaces
         res.name = deviceName
         entry = @getConfig deviceName
         res.config = entry
-
+        
+        console.log "entry: " + entry
         devName = deviceName.split('.')[0]
         if @devExists(devName)
-       
+            unless entry?
+              res = new Error "vlan #{deviceName} does not exist for device #{devName}"
         else
             res = new Error "Device does not exist! #{devName}"
         return res
 
-
+    getConfigVlan: (devName) ->
+        console.log 'listing device configuration'     
+        res = []
+        if @devExists(devName)
+          db.iface.forEach (key,val) -> 
+             result = {}          
+             devNamedb = key.split('.')[0]
+             if devName == devNamedb and key isnt devName                
+                result.name = key
+                result.config = val
+                res.push result
+        else
+            res = new Error "Device does not exist! #{devName}" 
+        return res 
         
     delete: (devName, callback) ->
         console.log 'deleting the devname ' + devName
         exec "ifdown #{devName}"
         fileops.fileExists "/proc/sys/net/vlan/config/#{devName}", (res) =>
             exec "vconfig rem #{devName}" unless res instanceof Error
-
+        
         fileops.removeFile "/config/network/interfaces/#{devName}", (result) =>
             if result instanceof Error
                 err = new Error "Invalid or unconfigured device posting!: #{devName}"
@@ -387,7 +406,36 @@ class interfaces
                 @updateConfig()
                 db.iface.rm devName
                 callback({result:true})
-    
+
+    deleteVlan: (devName, callback) ->
+        console.log 'deleting the devname ' + devName
+        exists = 0
+        skip = 0
+        arrFile = []
+        if @devExists(devName) 
+          files = fileops.readdirSync "/config/network/interfaces"
+          for file in files           
+            devNameFF = file.split('.')[0]
+            if devName == devNameFF
+              console.log " file: " + file
+              arrFile.push file
+              skip = skip + 1
+
+          for vid in arrFile
+            console.log 'skip : ' + skip
+            @delete vid, (res) =>
+              unless res instanceof Error
+                exists = exists + 1
+                console.log 'exists: ' + exists
+                if exists == skip
+                  callback(res) 
+              else
+                callback(res)
+        else
+            err = new Error "Device does not exist! #{devName}"
+            callback(err)
+
+        
 
 module.exports = interfaces
 module.exports.staticSchema = staticSchema

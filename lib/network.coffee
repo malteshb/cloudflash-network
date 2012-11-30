@@ -17,8 +17,7 @@ dhcp = require './dhcp'
             else
                 @next new Error "Invalid network posting! #{res}"
 
-    @post '/network/interfaces/:id/vlan/:vid', check.ifaceSchema,  ->
-
+    @post '/network/interfaces/:id/vlan/:vid', check.ifaceSchema,  ->       
         iface.config @params.id, @body,@params.vid, (res) =>
             unless res instanceof Error
                 @send res
@@ -39,8 +38,13 @@ dhcp = require './dhcp'
             @send res
         else
             @next res
-    @get "/network/interfaces/:id/vlan" : ->
-        # need to implement
+    @get "/network/interfaces/:id/vlan" : ->        
+        res = iface.getConfigVlan @params.id
+        unless res instanceof Error
+            @send res
+        else
+            @next res
+
 
     @get "/network/interfaces/:id/vlan/:vid" : ->
         devName = @params.id + '.' + @params.vid
@@ -53,12 +57,21 @@ dhcp = require './dhcp'
 
 
     @del "/network/interfaces/:id" : ->
-        iface.delete @params.id, (res) =>
+        iface.deleteVlan @params.id, (res) =>
             console.log res
             unless res instanceof Error
                 @send res, 204
             else
                 @next res
+    @del "/network/interfaces/:id/vlan/:vid" : ->
+        devName = @params.id + '.' + @params.vid
+        iface.delete devName, (res) =>
+            console.log res
+            unless res instanceof Error
+                @send res, 204
+            else
+                @next res
+
 
     @post '/network/dhcp/subnet', check.dhcpSchema, ->
        instance = dh.new @body
