@@ -197,7 +197,7 @@ class interfaces
         for file in files
             config += fileops.readFileSync "/config/network/interfaces/#{file}"
             #console.log config
-        fileops.updateFile "/etc/network/interfaces", config
+        fileops.updateFile "/etc/network/interfaces_test", config
         '''
         for ifid in ifaces
             console.log 'running ifup on device ' + ifid
@@ -223,14 +223,16 @@ class interfaces
     
     generateConfig: (type,devName,configStatic,staticDevName, vlanid) ->
         config = ''
-        if type == "static"               
-            config = "iface " + devName + " inet "
+        if type == "static"       
+            config = "auto #{devName} \n"        
+            config += "iface " + devName + " inet "
             config += "#{type}\n"
             config += "  " + "address 169.254.255.254\n"
             config += configStatic + "\n"
             i = 1
             for staticDev in staticDevName                
               console.log 'staticDev: ' + staticDev
+              config += "auto #{devName}:#{i} \n"
               config += "iface " + "#{devName}:#{i}" + " inet "
               config += "#{type}\n"
               config += "  " + "address #{staticDev}\n" 
@@ -243,12 +245,13 @@ class interfaces
               config = "auto #{devName}.#{vlanid} \n"
               config += "iface #{devName}.#{vlanid} inet static \n"
               config += configStatic 
-              config += "  " +"vlan-raw-device #{devName} \n"  
+              config += "  " +"vlan-raw-device #{devName} \n\n"  
                               
             else
               throw new Error "Invalid vlan id"
         else
-            config = "iface " + devName + " inet "           
+            config = "auto #{devName} \n"
+            config += "iface " + devName + " inet "           
             console.log 'type is ' + type
             switch type
               when "tunnel"
