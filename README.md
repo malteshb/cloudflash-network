@@ -13,20 +13,33 @@ cloudflash-network
     <td>GET</td><td>/network/interfaces</td><td>List summary of network interfaces configured</td>
   </tr>
   <tr>
-    <td>POST</td><td>/network/interfaces/:type/:id</td><td>Create network interfaces configuration</td>
+    <td>POST</td><td>/network/interfaces/:id</td><td>Create network a interfaces</td>
+  </tr>
+  <tr>
+    <td>POST</td><td>/network/interfaces/:id/vlan/:vid</td><td>Create a VLAN network interface</td>
   </tr>
   <tr>
     <td>GET</td><td>/network/interfaces/:id</td><td>Describes an configured network by ID</td>
   </tr>
+ <tr>
+    <td>GET</td><td>/network/interfaces/:id/vlan</td><td>Describes configured VLAN network</td>
+  </tr>
+  <tr>
+    <td>GET</td><td>/network/interfaces/:id/vlan/:vid</td><td>Describes a configured VLAN network by ID</td>
+  </tr>
+
   <tr>
     <td>DELETE</td><td>/network/interfaces/:id</td><td>Delete an configured network by ID</td>
+  </tr>
+  <tr>
+    <td>DELETE</td><td>/network/interfaces/:id/vlan/:vid</td><td>Delete an configured VLAN network by ID</td>
   </tr>
 </table>
 
 
 
- List Network
---------------
+ List Network Interfaces
+-------------------------
 
     Verb   URI                   Description
     GET    /network/interfaces   List summary of network interfaces configured.
@@ -105,41 +118,87 @@ Success: Returns JSON data with list of network configured.
 
 
 
-Configure Network
-------------------
+Configure Network Interfaces
+-----------------------------
 
 
     Verb    URI                            Description
-    POST    /network/interfaces/:type/:id  Create network interfaces configuration.
+    POST    /network/interfaces/:id  Create network interfaces configuration.
 
 **Example Request and Response**
 
-### Request JSON For Type static
+### Request JSON For static
          
     {
-        "address": "192.168.8.139",
-        "netmask": "192.168.8.225",
-        "broadcast": "169.254.255.255",
-        "gateway": "10.2.56.10",
+        "address": [
+            "192.168.8.139",
+            "192.168.8.140"
+        ],
+        "netmask": "255.255.255.0",
+        "broadcast": "192.168.8.255",
+        "gateway": "192.168.8.254",
         "pointtopoint": "cp01",
         "hwaddres": "82:fe:6e:12:85:41",
         "mtu": 1500,
-        "post-up": ["route add -net 10.10.10.0/24 gw 192.168.8.1 "]        
+        "post-up": [
+            "route add -net 10.10.10.0/24 gw 192.168.8.1 "
+        ]
     }
 
-### Request JSON For Type dynamic
+### Response JSON  
+
+    {
+        "result": true,
+        "config": {
+            "address": [
+                "192.168.8.139",
+                "192.168.8.140"
+            ],
+            "netmask": "255.255.255.0",
+            "broadcast": "192.168.8.255",
+            "gateway": "192.168.8.254",
+            "pointtopoint": "cp01",
+            "hwaddres": "82:fe:6e:12:85:41",
+            "mtu": 1500,
+            "post-up": [
+                "route add -net 10.10.10.0/24 gw 192.168.8.1 "
+            ]
+        }
+    }
+### Request JSON For dynamic
     
     {
+        "dhcp": true,
         "hostname": "192.168.8.139",
         "leasehours": "4",
         "leasetime": "60",
         "vendor": "10.2.56.10",
         "client": "10.2.56.11",
         "hwaddres": "82:fe:6e:12:85:41",
-        "post-up": ["route add -net 10.10.10.0/24 gw 192.168.8.1"]
+        "post-up": [
+            "route add -net 10.10.10.0/24 gw 192.168.8.1"
+        ]
     }
 
-### Request JSON For Type tunnel
+
+### Response JSON  
+
+    {
+        "result": true,
+        "config": {
+            "dhcp": true,
+            "hostname": "192.168.8.139",
+            "leasehours": "4",
+            "leasetime": "60",
+            "vendor": "10.2.56.10",
+            "client": "10.2.56.11",
+            "hwaddres": "82:fe:6e:12:85:41",
+            "post-up": [
+                "route add -net 10.10.10.0/24 gw 192.168.8.1"
+            ]
+        }
+    }
+### Request JSON For tunnel
 
     {   
         "address": "2001:470:1f06:f41::2",
@@ -153,16 +212,74 @@ Configure Network
         "post-up": ["route add -net 10.10.10.0/24 gw 192.168.8.1"]
     }
 
-### Response JSON    
+### Response JSON        
 
     {
-       "result": true
+       "result": true,
+       "config":
+       {
+           "address": "2001:470:1f06:f41::2",
+           "mode": "P2P/server",
+           "endpoint": "209.51.161.14",
+           "dstaddr": "64",
+           "local": "97.107.134.213",
+           "gateway": "2001:470:1f06:f41::1",
+           "ttl": "64",
+           "mtu": 1500,
+           "post-up":
+           [
+               "route add -net 10.10.10.0/24 gw 192.168.8.1"
+           ]
+       }
     }
 
 
 
-List a Network 
---------------
+Configure VLAN Network Interfaces
+---------------------------------
+
+
+    Verb    URI                                Description
+    POST    /network/interfaces/:id/vlan/:vid  Create network VLAN interfaces configuration.
+
+**Example Request and Response**
+
+### Request JSON For vlan
+         
+    {
+        "address": "192.168.8.139",
+        "vlan": 1,
+        "netmask": "255.255.255.0",
+        "broadcast": "192.168.8.255",
+        "gateway": "192.168.8.254",
+        "pointtopoint": "cp01",
+        "hwaddres": "82:fe:6e:12:85:41",
+        "mtu": 1500,
+        "post-up": [
+            "route add -net 10.10.10.0/24 gw 192.168.8.1 "
+        ]
+    }
+### Response JSON  
+
+    {
+        "result": true,
+        "config": {
+            "address": "192.168.8.139",
+            "vlan": 1,
+            "netmask": "255.255.255.0",
+            "broadcast": "192.168.8.255",
+            "gateway": "192.168.8.254",
+            "pointtopoint": "cp01",
+            "hwaddres": "82:fe:6e:12:85:41",
+            "mtu": 1500,
+            "post-up": [
+                "route add -net 10.10.10.0/24 gw 192.168.8.1 "
+            ]
+        }
+    }
+
+List a Network Interface
+------------------------
 
     Verb    URI                          Description
     GET   /network/interfaces/:id      Describes an configured network by name.
@@ -172,40 +289,115 @@ Note: The request does not require a message body.
 Success: Returns JSON data with list of network configured.
 
 
-*Response*
-
-    
+*Response*    
 
     {
-       "name": "eth0",
-       "config":
-       {
-           "address": "192.168.8.139",
-           "netmask": "192.168.8.225",
-           "broadcast": "169.254.255.255",
-           "gateway": "10.2.56.10",
-           "pointtopoint": "cp01",
-           "hwaddres": "82:fe:6e:12:85:41",
-           "mtu": 1500,
-           "post-up":
-           [
-               "route add -net 10.10.10.0/24 gw 192.168.8.1 "
-           ]
-       },
-       "stats":
-       {
-           "txbytes": "920143",
-           "rxbytes": "26016521"
-       },
-       "operstate": "up",
-       "mtu": "1500",
-       "devtype": "Ether"
+        "name": "eth0",
+        "config": {
+            "address": [
+                "192.168.8.139",
+                "192.168.8.140"
+            ],
+            "netmask": "255.255.255.0",
+            "broadcast": "192.168.8.255",
+            "gateway": "192.168.8.254",
+            "pointtopoint": "cp01",
+            "hwaddres": "82:fe:6e:12:85:41",
+            "mtu": 1500,
+            "post-up": [
+                "route add -net 10.10.10.0/24 gw 192.168.8.1 "
+            ]
+         },
+        "stats": {
+             "txbytes": "43304548",
+            "rxbytes": "211100908"
+        },
+        "operstate": "up",
+        "mtu": "1500",
+        "devtype": "Ether"
     }
 
+List VLAN Network Interface 
+----------------------------
+
+    Verb    URI                             Description
+    GET   /network/interfaces/:id/vlan      Describes configured VLAN network.
 
 
+Note: The request does not require a message body.
+Success: Returns JSON data with list of network configured.
 
-Delete a network
+
+*Response*    
+
+    [
+        {
+            "name": "eth0.1",
+            "config": {
+                "address": "192.168.8.150",
+                "vlan": 1,
+                "netmask": "255.255.255.0",
+                "broadcast": "192.168.8.255",
+                "gateway": "192.168.8.254",
+                "pointtopoint": "cp01",
+                "hwaddres": "82:fe:6e:12:85:41",
+                "mtu": 1500,
+                "post-up": [
+                    "route add -net 10.10.10.0/24 gw 192.168.8.1 "
+                ]
+            }
+        },
+       {
+            "name": "eth0.2",
+            "config": {
+                "address": "192.168.8.140",
+                "vlan": 2,
+                "netmask": "255.255.255.0",
+                "broadcast": "192.168.8.255",
+                "gateway": "192.168.8.254",
+                "pointtopoint": "cp01",
+                "hwaddres": "82:fe:6e:12:85:41",
+                "mtu": 1500,
+                "post-up": [
+                    "route add -net 10.10.10.0/24 gw 192.168.8.1 "
+                ]
+            }
+       }
+    ]
+
+List a VLAN Network Interface
+-----------------------------
+
+    Verb    URI                                  Description
+    GET   /network/interfaces/:id/vlan/:vid      Describes a configured VLAN network by ID.
+
+
+Note: The request does not require a message body.
+Success: Returns JSON data with list of network configured.
+
+
+*Response*
+    
+    {
+        "name": "eth0.1",
+        "config": {
+            "address": "192.168.8.139",
+            "vlan": 1,
+            "netmask": "255.255.255.0",
+            "broadcast": "192.168.8.255",
+            "gateway": "192.168.8.254",
+            "pointtopoint": "cp01",
+            "hwaddres": "82:fe:6e:12:85:41",
+            "mtu": 1500,
+            "post-up": [
+                "route add -net 10.10.10.0/24 gw 192.168.8.1 "
+            ]
+        }
+    }
+    
+
+
+Delete a network interface
 ----------------
 
     Verb    URI                          Description
@@ -221,12 +413,30 @@ On Success returns 200 with JSON data
 
     DELETE /network/interfaces/eth0
 
-### Response JSON
+### Response Header
 
-    {
-       "result": true
-    }
+   Status Code : 204
 
+
+Delete a VLAN network interface
+--------------------------------
+
+    Verb    URI                                     Description
+    DELETE    /network/interfaces/:id/vlan/:vid	   Delete an configured VLAN network by VLAN ID.
+
+On Success returns 200 with JSON data
+
+*TODO: Return appropriate error code and description in case of failure.*
+
+**Example Request and Response**
+
+### Request Headers
+
+    DELETE /network/interfaces/eth0/vlan/1
+
+### Response Header
+
+   Status Code : 204
 
 
 *List of DHCP subnet APIs*

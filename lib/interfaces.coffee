@@ -197,7 +197,7 @@ class interfaces
         for file in files
             config += fileops.readFileSync "/config/network/interfaces/#{file}"
             #console.log config
-        fileops.updateFile "/etc/network/interfaces_test", config
+        fileops.updateFile "/etc/network/interfaces", config
         '''
         for ifid in ifaces
             console.log 'running ifup on device ' + ifid
