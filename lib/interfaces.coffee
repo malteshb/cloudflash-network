@@ -5,21 +5,35 @@ exec = require('child_process').exec
 
 @db = db =
     iface: require('dirty') '/tmp/iface.db'
+    ifaceAlias: require('dirty') '/tmp/ifacealias.db'
 
 staticSchema =
     name: "static"
     type: "object"
     additionalProperties: false
     properties:
-        address : {"type":"string", "required":true}
+        address : 
+           items: {"type":"string", "required":true}
         netmask: {"type":"string", "required":true}
         broadcast: {"type":"string", "required":true}
         gateway: {"type":"string", "required":true}
         pointtopoint: {"type":"string", "required":false}
         hwaddres: {"type":"string", "required":false}
         mtu: {"type":"number", "required":false}
-        up: {"type":"string", "required":false}
-        down: {"type":"string", "required":false}
+        up: 
+           items: { type: "string", "required":false }
+        down: 
+           items: { type: "string", "required":false }
+        'post-up': 
+           items: { type: "string", "required":false }
+        'post-down': 
+           items: { type: "string", "required":false }
+        'pre-up': 
+           items: { type: "string", "required":false }
+        'pre-down': 
+           items: { type: "string", "required":false }
+
+
 
 
 dynamicSchema =
@@ -27,14 +41,25 @@ dynamicSchema =
     type: "object"
     additionalProperties: false
     properties:
+        dhcp: {"type":"boolean", "required":true}
         hostname: {"type":"string", "required":false}
         leasehours: {"type":"string", "required":false}
         leasetime: {"type":"string", "required":false}
         vendor: {"type":"string", "required":false}
         client: {"type":"string", "required":false}
         hwaddres: {"type":"string", "required":false}
-        up: {"type":"string", "required":false}
-        down: {"type":"string", "required":false}
+        up: 
+           items: { type: "string", "required":false }
+        down: 
+           items: { type: "string", "required":false }
+        'post-up': 
+           items: { type: "string", "required":false }
+        'post-down': 
+           items: { type: "string", "required":false }
+        'pre-up': 
+           items: { type: "string", "required":false }
+        'pre-down': 
+           items: { type: "string", "required":false }
 
 
 tunnelSchema =
@@ -50,10 +75,44 @@ tunnelSchema =
         gateway: {"type":"string", "required":false}
         ttl: {"type":"string", "required":false}
         mtu: {"type":"number", "required":false}
-        up: {"type":"string", "required":false}
-        down: {"type":"string", "required":false}
+        up: 
+           items: { type: "string", "required":false }
+        down: 
+           items: { type: "string", "required":false }
+        'post-up': 
+           items: { type: "string", "required":false }
+        'post-down': 
+           items: { type: "string", "required":false }
+        'pre-up': 
+           items: { type: "string", "required":false }
+        'pre-down': 
+           items: { type: "string", "required":false }
 
-
+vlanSchema =
+    name: "vlan"
+    type: "object"
+    additionalProperties: false
+    properties:
+        address : {"type":"string", "required":true}
+        vlan : {"type":"number", "required":true}
+        netmask: {"type":"string", "required":true}
+        broadcast: {"type":"string", "required":true}
+        gateway: {"type":"string", "required":true}
+        pointtopoint: {"type":"string", "required":false}
+        hwaddres: {"type":"string", "required":false}
+        mtu: {"type":"number", "required":false}
+        up: 
+           items: { type: "string", "required":false }
+        down: 
+           items: { type: "string", "required":false }
+        'post-up': 
+           items: { type: "string", "required":false }
+        'post-down': 
+           items: { type: "string", "required":false }
+        'pre-up': 
+           items: { type: "string", "required":false }
+        'pre-down': 
+           items: { type: "string", "required":false }
             
 
 class interfaces
@@ -98,6 +157,13 @@ class interfaces
             console.log result
             res.push result
 
+        db.ifaceAlias.forEach (key,val) ->
+            result = {}
+            console.log 'found key ' + key + ' value is ' + val
+            result.name = key
+            result.config = val
+            res.push result
+
         callback (res)
 
     getConfig: (devName) ->
@@ -122,33 +188,93 @@ class interfaces
     updateConfig: ->
         console.log 'loading config on unix system'
         ifaces = fileops.readdirSync "/sys/class/net"
-        config = "auto "
-        for ifid in ifaces
-            config += ifid
-            config += " "
-        config += "\n"
+        config = "auto lo \n"
+        config += "iface lo inet loopback\n"
 
-        console.log config
+        #console.log config
         files = fileops.readdirSync "/config/network/interfaces"
         console.log 'files present ' + files
         for file in files
             config += fileops.readFileSync "/config/network/interfaces/#{file}"
-            console.log config
-        #for now I do not want to mess up my ubuntu system :)    
+            #console.log config
         fileops.updateFile "/etc/network/interfaces", config
         '''
         for ifid in ifaces
             console.log 'running ifup on device ' + ifid
             exec "ifup #{ifid}"
         '''
+    # To find type static/dynamic/tunnel/vlan
+    getType : (body) ->
+        type = ''
+        for key, val of body      
+          switch (key)
+              when "address"
+                switch (typeof val)
+                  when "object"
+                    if val instanceof Array
+                      type = "static"
+                  when "string"
+                      type = "tunnel"
+              when "dhcp"
+                type = "dynamic"
+              when "vlan"
+                type = "vlan"
+        return type
+    
+    generateConfig: (type,devName,configStatic,staticDevName, vlanid) ->
+        config = ''
+        if type == "static"       
+            config = "auto #{devName} \n"        
+            config += "iface " + devName + " inet "
+            config += "#{type}\n"
+            config += "  " + "address 169.254.255.254\n"
+            config += configStatic + "\n"
+            i = 1
+            for staticDev in staticDevName                
+              console.log 'staticDev: ' + staticDev
+              config += "auto #{devName}:#{i} \n"
+              config += "iface " + "#{devName}:#{i}" + " inet "
+              config += "#{type}\n"
+              config += "  " + "address #{staticDev}\n" 
+              config += configStatic + "\n"               
+              i = i + 1
+              console.log "i is : " + i
 
-    config: (devName, body, type, callback) ->
+        else if type == "vlan"
+            if vlanid
+              config = "auto #{devName}.#{vlanid} \n"
+              config += "iface #{devName}.#{vlanid} inet static \n"
+              config += configStatic 
+              config += "  " +"vlan-raw-device #{devName} \n\n"  
+                              
+            else
+              throw new Error "Invalid vlan id"
+        else
+            config = "auto #{devName} \n"
+            config += "iface " + devName + " inet "           
+            console.log 'type is ' + type
+            switch type
+              when "tunnel"
+                  config += "#{type}\n"
+              when "dynamic"
+                  config += "dhcp\n"                
+              else
+                  throw new Error "Invalid interface method posting! #{type}"  
+            config += configStatic + "\n"
+        #console.log ' config in fun : ' + config
+        return config     
+
+    config: (devName, body,vlanid, callback) ->
         exists = 0
         skip = 0
-        ifaces = fileops.readdirSync "/sys/class/net"
-
-        # currently supporting VLANs only
-        device = devName.split('.')[0]
+        type = ''
+        ifaces = fileops.readdirSync "/sys/class/net"  
+       
+        type = @getType body     
+        
+        console.log 'type is: ' + type
+        devicev = devName.split('.')[0]
+        device = devName.split(':')[0]
         console.log 'device is ' + device
         for ifid in ifaces
             if ifid == device then exists = 1
@@ -159,23 +285,30 @@ class interfaces
             callback err
 
         try unless skip == 1
+            staticDevName = []
+            configStatic = ''            
+            console.log 'type: ' + type
 
-            config = "iface " + devName + " inet "
-            console.log 'type is ' + type
-            switch type
-                when "static", "dynamic", "tunnel"
-                    config += "#{type}\n"
-                else
-                    throw new Error "Invalid interface method posting! #{type}"
-
-            for key, val of body
+            for key, val of body                                
                 switch (typeof val)
+                    when "object"
+                      if val instanceof Array
+                        for i in val
+                          switch key
+                            when "post-up", "post-down", "pre-up", "pre-down", "up", "down"  
+                              configStatic += "  " + key + ' ' + i + "\n"
+                            when "address"
+                              staticDevName.push i                                                         
                     when "number", "string"
-                        config += "  " + key + ' ' + val + "\n"
+                        configStatic += "  " + key + ' ' + val + "\n"
                     when "boolean"
-                        config += "  " + key + "\n"
+                        configStatic += "  " + key + "\n"
 
-            console.log 'config is ' + config
+            config = @generateConfig type, devName, configStatic, staticDevName, vlanid
+            
+            console.log 'config is : ' + config
+            if type == 'vlan'
+              devName = devName + '.' + vlanid
             filename = "/config/network/interfaces/#{devName}"
             fileops.createFile filename, (result) =>
                 return new Error "Unable to create configuration file for device: #{devName}!" if result instanceof Error
@@ -183,27 +316,37 @@ class interfaces
                 try
                     db.iface.set devName, body, =>
                         console.log "#{devName} added to network interfaces"
+                    console.log 'device is ' + device + ' devicev is ' + devicev
+                    unless device == devicev
+                        db.ifaceAlias.set devName, body, =>
+                            console.log "Alias #{devName} added to network interfaces"
                     @updateConfig()
-                    exec "ifdown #{devName}"
-                    exec "ifup #{devName}"
-                    callback({result:true})
+                    exec "ifdown #{devName}; ifup #{devName}", (error, stdout, stderror) =>
+                        console.log error
+                    
+                    res = {}
+                    res.result = true
+                    res.config = @getConfig devName
+                    callback(res)
 
                 catch err
                     console.log err
                     callback(err)
+        
         catch err
-            callback(err)
+            callback(err)        
 
     # should not fail, return available data
-    getInfo: (devName, callback) ->
+    getInfo: (deviceName, callback) ->
         # get status, running stats, configuration for the given device
         res = {}
         result = ''
-        console.log 'fetching info for device: ' + devName
-        res.name = devName
-        entry = @getConfig devName
+        console.log 'fetching info for device: ' + deviceName
+        res.name = deviceName
+        entry = @getConfig deviceName
         res.config = entry
 
+        devName = deviceName.split(':')[0]
         if @devExists(devName)
             res.stats = @getStats devName
             console.log 'reading operstate mtu and type '
@@ -220,19 +363,86 @@ class interfaces
 
         return res
 
+    getVlanInfo: (deviceName, callback) ->
+        res = {}
+        result = ''
+        console.log 'fetching vlan info for device: ' + deviceName
+        res.name = deviceName
+        entry = @getConfig deviceName
+        res.config = entry
+        
+        console.log "entry: " + entry
+        devName = deviceName.split('.')[0]
+        if @devExists(devName)
+            unless entry?
+              res = new Error "vlan #{deviceName} does not exist for device #{devName}"
+        else
+            res = new Error "Device does not exist! #{devName}"
+        return res
+
+    getConfigVlan: (devName) ->
+        console.log 'listing device configuration'     
+        res = []
+        if @devExists(devName)
+          db.iface.forEach (key,val) -> 
+             result = {}          
+             devNamedb = key.split('.')[0]
+             if devName == devNamedb and key isnt devName                
+                result.name = key
+                result.config = val
+                res.push result
+        else
+            res = new Error "Device does not exist! #{devName}" 
+        return res 
+        
     delete: (devName, callback) ->
         console.log 'deleting the devname ' + devName
         exec "ifdown #{devName}"
+        fileops.fileExists "/proc/sys/net/vlan/config/#{devName}", (res) =>
+            exec "vconfig rem #{devName}" unless res instanceof Error
+        
         fileops.removeFile "/config/network/interfaces/#{devName}", (result) =>
             if result instanceof Error
                 err = new Error "Invalid or unconfigured device posting!: #{devName}"
                 callback(err)
             else
                 @updateConfig()
+                db.iface.rm devName
                 callback({result:true})
+
+    deleteVlan: (devName, callback) ->
+        console.log 'deleting the devname ' + devName
+        exists = 0
+        skip = 0
+        arrFile = []
+        if @devExists(devName) 
+          files = fileops.readdirSync "/config/network/interfaces"
+          for file in files           
+            devNameFF = file.split('.')[0]
+            if devName == devNameFF
+              console.log " file: " + file
+              arrFile.push file
+              skip = skip + 1
+
+          for vid in arrFile
+            console.log 'skip : ' + skip
+            @delete vid, (res) =>
+              unless res instanceof Error
+                exists = exists + 1
+                console.log 'exists: ' + exists
+                if exists == skip
+                  callback(res) 
+              else
+                callback(res)
+        else
+            err = new Error "Device does not exist! #{devName}"
+            callback(err)
+
+        
 
 module.exports = interfaces
 module.exports.staticSchema = staticSchema
 module.exports.dynamicSchema = dynamicSchema
 module.exports.tunnelSchema = tunnelSchema
+module.exports.vlanSchema = vlanSchema
 

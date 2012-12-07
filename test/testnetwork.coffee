@@ -17,14 +17,16 @@ http = require('http')
 options = {port:80, host:'google.com'}
 orgrequest = http.request(options)
 
-ifacestatic = { "address": "192.168.8.139","netmask":"192.168.8.225","broadcast":"169.254.255.255", "gateway":"10.2.56.10","pointtopoint": "cp01","hwaddres": "82:fe:6e:12:85:41","mtu": 1500,"up": "yes","down": "no"}
-ifacedynamic = { "hostname": "192.168.8.139","leasehours":"4","leasetime":"60","vendor":"10.2.56.10","client": "10.2.56.11","hwaddres": "82:fe:6e:12:85:41","up": "yes","down": "no"}
-ifacetunnel = {"address": "2001:470:1f06:f41::2","mode":"P2P/server","endpoint":"209.51.161.14","dstaddr":"64","local": "97.107.134.213","gateway": "2001:470:1f06:f41::1","ttl": "64","mtu": 1500,"up": "yes","down": "no"}
+ifacestatic = {"address":["192.168.8.139","192.168.8.140"],"netmask":"255.255.255.0","broadcast":"192.168.8.255","gateway":"192.168.8.254","pointtopoint":"cp01","hwaddres":"82:fe:6e:12:85:41","mtu":1500,"post-up":["route add -net 10.10.10.0/24 gw 192.168.8.1 "]}
+ifacedynamic = {"dhcp":true,"hostname":"192.168.8.139","leasehours":"4","leasetime":"60","vendor":"10.2.56.10","client":"10.2.56.11","hwaddres":"82:fe:6e:12:85:41","post-up":["route add -net 10.10.10.0/24 gw 192.168.8.1"]}
+ifacetunnel = {"address":"2001:470:1f06:f41::2","mode":"P2P/server","endpoint":"209.51.161.14","dstaddr":"64","local":"97.107.134.213","gateway":"2001:470:1f06:f41::1","ttl":"64","mtu":1500,"post-up":["route add -net 10.10.10.0/24 gw 192.168.8.1"]}
+ifaceVlan = {"address":"192.168.8.139","vlan":1,"netmask":"255.255.255.0","broadcast":"192.168.8.255","gateway":"192.168.8.254","pointtopoint":"cp01","hwaddres":"82:fe:6e:12:85:41","mtu":1500,"post-up":["route add -net 10.10.10.0/24 gw 192.168.8.1 "]}
 dhcpSchema = {"start": "192.168.0.20","end": "192.168.0.254","interface": "eth0","max_leases": 254,"remaining": "yes","auto_time": 7200,"decline_time": 3600,"conflict_time": 3600,"offer_time": 60,"min_lease": 60,"lease_file": "/var/lib/misc/udhcpd.leases","pidfile": "/var/run/udhcpd.pid","notify_file": "dumpleases","siaddr": "192.168.0.22","sname": "zorak", "boot_file": "/var/lib/misc/udhcpd.leases","option": ["subnet 192.168.0.25","timezone IST"] }
 
-ifacestatic_err = { "netmask":"192.168.8.225","broadcast":"169.254.255.255", "gateway":"10.2.56.10","pointtopoint": "cp01","hwaddres": "82:fe:6e:12:85:41","mtu": 1500,"up": "yes","down": "no"}
-ifacedynamic_err = { "hostname": 39,"leasehours":"4","leasetime":"60","vendor":"10.2.56.10","client": "10.2.56.11","hwaddres": "82:fe:6e:12:85:41","up": "yes","down": "no"}
+ifacestatic_err = {"address":["192.168.8.139","192.168.8.140"],"broadcast":"192.168.8.255","gateway":"192.168.8.254","pointtopoint":"cp01","hwaddres":"82:fe:6e:12:85:41","mtu":1500,"post-up":["route add -net 10.10.10.0/24 gw 192.168.8.1 "]}
+ifacedynamic_err = {"hostname":"192.168.8.139","leasehours":"4","leasetime":"60","vendor":"10.2.56.10","client":"10.2.56.11","hwaddres":"82:fe:6e:12:85:41","post-up":["route add -net 10.10.10.0/24 gw 192.168.8.1"]}
 ifacetunnel_err = {"address": "2001:470:1f06:f41::2","mode":"P2P/server","endpoint":"209.51.161.14","dstaddr":"64","local": "97.107.134.213","gateway": "2001:470:1f06:f41::1","ttl": 64,"mtu": 1500,"up": "yes","down": "no"}
+ifaceVlan_err = {"address":"192.168.8.139","vlan":1,"netmask":"255.255.255.0","broadcast":"192.168.8.255","pointtopoint":"cp01","hwaddres":"82:fe:6e:12:85:41","mtu":1500,"post-up":["route add -net 10.10.10.0/24 gw 192.168.8.1 "]}
 
 dhcpconfig = {"start": "192.168.0.20", "end": "192.168.0.254", "interface": "eth0", "max_leases": 254, "remaining": "yes", "auto_time": 7200, "decline_time": 3600, "conflict_time": 3600, "offer_time": 60, "min_lease": 60, "lease_file": "/var/lib/misc/udhcpd.leases", "pidfile": "/var/run/udhcpd.pid", "notify_file": "dumpleases", "siaddr": "192.168.0.22", "sname": "zorak", "boot_file": "/var/lib/misc/udhcpd.leases", "option": ["subnet 192.168.0.25", "timezone IST"]}
 
@@ -35,6 +37,7 @@ addressconfig = {"optionparam": "router", "address": ["192.10.0.40", "192.10.0.4
 addressconfig_err = {"optionparam": 1234, "address": ["192.10.0.40", "192.10.0.41"]}
 
 describe 'Testing network endpoints functions: ', ->
+
   
   it 'validate network validateIfaceStaticSchema', ->
     result = null
@@ -53,14 +56,20 @@ describe 'Testing network endpoints functions: ', ->
     body = ifacetunnel
     result = validate body, iface.tunnelSchema
     expect(result).to.eql({ valid: true, errors: [] })
+  
+  it 'validate network validateIfaceVlanSchema', ->
+    result = null
+    body = ifaceVlan
+    result = validate body, iface.vlanSchema
+    expect(result).to.eql({ valid: true, errors: [] })
+
 
   it 'invalid network validateIfaceStaticSchema', ->
     result = null
     body = ifacestatic_err
     result = validate body, iface.staticSchema
-
     expect(result).to.not.eql({ valid: true, errors: [] })
-
+  
   it 'invalid network validateIfaceDynamicSchema', ->
     result = null
     body = ifacedynamic_err
@@ -72,21 +81,26 @@ describe 'Testing network endpoints functions: ', ->
     body = ifacetunnel_err
     result = validate body, iface.tunnelSchema
     expect(result).to.not.eql({ valid: true, errors: [] })
-
+ 
+  it 'invalid network validateIfaceVlanSchema', ->
+    result = null
+    body = ifaceVlan_err
+    result = validate body, iface.vlanSchema
+    expect(result).to.not.eql({ valid: true, errors: [] })
+  
     
   it 'Test function network config function', (done) ->
     body = result = null
     body = ifacestatic
     nwk = new iface
     params = {}
-    params.id = 'eth0'
-    params.type = 'static'
+    params.id = 'eth0'   
  
-    nwk.config params.id, body, params.type, (res) =>
+    nwk.config params.id, body, false, (res) =>
       setTimeout (->
          result = res
          console.log "result: " + result
-         expect(result).to.eql({result:true})
+         expect(result).to.be.an('object')
          done()
        ), 50
   
@@ -161,14 +175,12 @@ describe 'Testing network endpoints functions: ', ->
     nwk6 = new iface
     params = {}
     params.id = 'eth0test'
-    params.type = 'static'
-
  
-    nwk6.config params.id, body, params.type, (res) =>
+    nwk6.config params.id, body, false, (res) =>
       setTimeout (->
          result = res
          console.log "result: " + result
-         expect(result).to.not.eql({result:true})
+         result.should.not.be.an('object')
          done()
       ), 50
     
@@ -205,7 +217,58 @@ describe 'Testing network endpoints functions: ', ->
        expect(result).to.not.eql({result:true})
        done()
       ), 50
+  
+  it 'function getType', ->
+    body = null 
+    body = ifacestatic
+    nwk10 = new iface    
+    result = nwk10.getType body
+    expect(result).to.eql("static")
+  
+  it 'Test function network vlan config function', (done) ->
+    body = result = null
+    body = ifaceVlan
+    nwk11 = new iface
+    params = {}
+    params.id = 'eth0'
+    params.vid = 11
  
+    nwk11.config params.id, body, params.vid, (res) =>
+      setTimeout (->
+         result = res
+         console.log "result: " + result
+         expect(result).to.be.an('object')
+         done()
+       ), 50
+
+  it 'function getVlanInfo', ->
+    params = {}
+    params.id = 'eth0'
+    params.vid = 11
+    devName = params.id + '.' + params.vid    
+    nwk12 = new iface    
+    result = nwk12.getVlanInfo devName
+    expect(result).to.be.an('object')   
+  
+  it 'function getConfigVlan', ->
+    params = {}
+    params.id = 'eth0'           
+    nwk13 = new iface    
+    result = nwk13.getConfigVlan params.id
+    expect(result).to.be.an('array')
+
+  it 'Test function network deleteVlan', (done) ->    
+    params = {}
+    params.id = 'eth0'   
+    nwk14 = new iface
+    nwk14.deleteVlan params.id, (res) =>
+      setTimeout (->
+         result = res
+         console.log "result: " + result
+         expect(result).to.eql({result:true})
+         done()
+       ), 50
+  
   #dhcp API test cases
   it 'validate dhcp validateDhcpSchema', ->
     result = null
@@ -381,6 +444,6 @@ describe 'Testing network endpoints functions: ', ->
          expect(result).to.have.property('config')
          done()
       ), 50
-  
+   
         
 
