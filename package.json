@@ -1,11 +1,12 @@
 {
   "name": "cloudflash-network",
-  "version": "0.5.9",
-  "dependencies": {
-    "zappajs": "0.3.x",
+  "version": "0.6.0",
+  "dependencies": {    
+    "fileops":"0.1.3",
+    "json-schema": "0.2.0",
     "dirty":"0.9.x",
-    "json-schema":"0.2.x",
-    "fileops":"0.1.x"
+    "lazy":"1.0.x",
+    "node-uuid": "1.3.x"
   },
   "engines": {
     "node": "0.6.x"
@@ -18,5 +19,7 @@
     "type": "git",
     "url": "git://github.com/clearpath-networks/cloudflash-network.git"
   },
-  "main": "./lib/interfaces"
+  "main": "./lib/network"
 }
+
+
