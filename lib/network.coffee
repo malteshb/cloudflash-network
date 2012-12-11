@@ -1,5 +1,4 @@
 check = require './checkschema'
-
 interfaces = require './interfaces'
 dhcp = require './dhcp'
 
@@ -11,14 +10,14 @@ dhcp = require './dhcp'
   
     @post '/network/interfaces/:id', check.ifaceSchema,  ->
 
-        iface.config @params.id, @body,false, (res) =>
+        iface.config @params.id, @body, "", (res) =>
             unless res instanceof Error
                 @send res
             else
                 @next new Error "Invalid network posting! #{res}"
 
-    @post '/network/interfaces/:id/vlan/:vid', check.ifaceSchema,  ->       
-        iface.config @params.id, @body,@params.vid, (res) =>
+    @post '/network/interfaces/:id/vlan/:vid', check.ifaceSchema,  ->
+        iface.config @params.id, @body, @params.vid, (res) =>
             unless res instanceof Error
                 @send res
             else
@@ -38,8 +37,9 @@ dhcp = require './dhcp'
             @send res
         else
             @next res
-    @get "/network/interfaces/:id/vlan" : ->        
-        res = iface.getConfigVlan @params.id
+
+    @get "/network/interfaces/:id/vlan" : ->
+        res = iface.getConfig @params.id
         unless res instanceof Error
             @send res
         else
@@ -48,7 +48,7 @@ dhcp = require './dhcp'
 
     @get "/network/interfaces/:id/vlan/:vid" : ->
         devName = @params.id + '.' + @params.vid
-        res = iface.getVlanInfo devName
+        res = iface.getConfig "#{devName}.{@params.vid}"
         unless res instanceof Error
             @send res
         else
@@ -57,18 +57,18 @@ dhcp = require './dhcp'
 
 
     @del "/network/interfaces/:id" : ->
-        iface.deleteVlan @params.id, (res) =>
+        iface.delete @params.id, 'false',  (res) =>
             console.log res
             unless res instanceof Error
-                @send res, 204
+                @send 204
             else
                 @next res
+
     @del "/network/interfaces/:id/vlan/:vid" : ->
-        devName = @params.id + '.' + @params.vid
-        iface.delete devName, (res) =>
+        iface.delete devName, @params.vid, (res) =>
             console.log res
             unless res instanceof Error
-                @send res, 204
+                @send 204
             else
                 @next res
 
@@ -90,14 +90,14 @@ dhcp = require './dhcp'
                 @next new Error "Failed to fetch subnet id: #{@params.id}"
 
     @del '/network/dhcp/subnet/:id', ->
-        console.log 'inside /network/dhcp/subnet/:id' 
+        console.log 'inside /network/dhcp/subnet/:id'
         id = @params.id
         optionvalue = 'subnet'
         result = dh.removeConfig id, optionvalue, filename
         unless result instanceof Error
             @send result
         else
-            @next new Error "Failed to delete subnet!#{result}" 
+            @next new Error "Failed to delete subnet!#{result}"
            
     @post '/network/dhcp/router', check.addressSchema, ->
        instance = dh.new @body
@@ -147,7 +147,7 @@ dhcp = require './dhcp'
         unless result instanceof Error
             @send result
         else
-            @next new Error "Failed to delete timesvr!#{result}"            
+            @next new Error "Failed to delete timesvr!#{result}"
  
     @post '/network/dhcp/namesvr', check.addressSchema, ->
        instance = dh.new @body

@@ -28,25 +28,10 @@ validateIfaceVlanSchema = (body, callback) ->
     callback result
   
 module.exports.ifaceSchema = validateIfaceSchema = ->
-    console.log 'in ifaceSchema validation'    
+    console.log 'in ifaceSchema validation ' + @body.type
+    console.log @body
     
-    type = ''
-    for key, val of @body      
-      switch (key)
-          when "address"
-            switch (typeof val)
-              when "object"
-                if val instanceof Array
-                  type = "static"
-              when "string"
-                  type = "tunnel"
-          when "dhcp"
-            type = "dynamic"
-          when "vlan"
-            type = "vlan" 
-             
-    console.log 'type : ' + type
-    switch (type)
+    switch (@body.type)
         when 'static'
             validateIfaceStaticSchema @body, (result) =>
                 console.log result
