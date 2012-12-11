@@ -229,7 +229,7 @@ class interfaces
                               
         else
             config = "auto #{devName} \n"
-            config += "iface #{devName} inet #{type}"
+            config += "iface #{devName} inet "
             console.log 'type is ' + type
             switch type
               when "tunnel"

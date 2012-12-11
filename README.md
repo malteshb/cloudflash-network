@@ -130,6 +130,7 @@ Configure Network Interfaces
 ### Request JSON For static
          
     {
+        "type": "static",
         "address": [
             "192.168.8.139",
             "192.168.8.140"
@@ -150,6 +151,7 @@ Configure Network Interfaces
     {
         "result": true,
         "config": {
+            "type": "static",
             "address": [
                 "192.168.8.139",
                 "192.168.8.140"
@@ -168,6 +170,7 @@ Configure Network Interfaces
 ### Request JSON For dynamic
     
     {
+        "type": "dynamic",
         "dhcp": true,
         "hostname": "192.168.8.139",
         "leasehours": "4",
@@ -186,6 +189,7 @@ Configure Network Interfaces
     {
         "result": true,
         "config": {
+            "type": "dynamic",
             "dhcp": true,
             "hostname": "192.168.8.139",
             "leasehours": "4",
@@ -201,6 +205,7 @@ Configure Network Interfaces
 ### Request JSON For tunnel
 
     {   
+        "type" : "tunnel",
         "address": "2001:470:1f06:f41::2",
         "mode":"P2P/server",
         "endpoint":"209.51.161.14", 
@@ -218,6 +223,7 @@ Configure Network Interfaces
        "result": true,
        "config":
        {
+           "type" : "tunnel",
            "address": "2001:470:1f06:f41::2",
            "mode": "P2P/server",
            "endpoint": "209.51.161.14",
@@ -247,8 +253,8 @@ Configure VLAN Network Interfaces
 ### Request JSON For vlan
          
     {
-        "address": "192.168.8.139",
-        "vlan": 1,
+        "type" : "vlan",
+        "address": "192.168.8.139",  
         "netmask": "255.255.255.0",
         "broadcast": "192.168.8.255",
         "gateway": "192.168.8.254",
@@ -264,8 +270,8 @@ Configure VLAN Network Interfaces
     {
         "result": true,
         "config": {
-            "address": "192.168.8.139",
-            "vlan": 1,
+            "type": "vlan",
+            "address": "192.168.8.139",            
             "netmask": "255.255.255.0",
             "broadcast": "192.168.8.255",
             "gateway": "192.168.8.254",
