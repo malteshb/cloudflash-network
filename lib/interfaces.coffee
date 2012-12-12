@@ -63,65 +63,32 @@ dynamicSchema =
         'pre-down':
            items: { type: "string", "required":false }
 
-
-tunnelSchema =
-    name: "tunnel"
-    type: "object"
-    additionalProperties: false
-    properties:
-        type: {"type":"string", "required":true}
-        address: {"type":"string", "required":true}
-        mode: {"type":"string", "required":true}
-        endpoint: {"type":"string", "required":true}
-        dstaddr: {"type":"string", "required":true}
-        local: {"type":"string", "required":false}
-        gateway: {"type":"string", "required":false}
-        ttl: {"type":"string", "required":false}
-        mtu: {"type":"number", "required":false}
-        up:
-           items: { type: "string", "required":false }
-        down:
-           items: { type: "string", "required":false }
-        'post-up':
-           items: { type: "string", "required":false }
-        'post-down':
-           items: { type: "string", "required":false }
-        'pre-up':
-           items: { type: "string", "required":false }
-        'pre-down':
-           items: { type: "string", "required":false }
-
-vlanSchema =
-    name: "vlan"
-    type: "object"
-    additionalProperties: false
-    properties:
-        type: {"type":"string", "required":true}
-        address : {"type":"string", "required":true}
-        netmask: {"type":"string", "required":true}
-        broadcast: {"type":"string", "required":true}
-        gateway: {"type":"string", "required":true}
-        pointtopoint: {"type":"string", "required":false}
-        hwaddres: {"type":"string", "required":false}
-        mtu: {"type":"number", "required":false}
-        up:
-           items: { type: "string", "required":false }
-        down:
-           items: { type: "string", "required":false }
-        'post-up':
-           items: { type: "string", "required":false }
-        'post-down':
-           items: { type: "string", "required":false }
-        'pre-up':
-           items: { type: "string", "required":false }
-        'pre-down':
-           items: { type: "string", "required":false }
             
+restart_network = (callback)->
+    res =  fileops.fileExistsSync "/etc/init.d/network"
+    unless res instanceof Error
+        console.log 'network file exists'
+        cmd = "/etc/init.d/network stop; /etc/init.d/network start"
+    else
+        cmd = "/etc/init.d/networking stop; service networking start"
+    
+    exec cmd, (error, stdout, stderror) =>
+        unless error
+            callback(true)
+        else
+            console.log error
+            callback(error)
 
 class interfaces
     constructor:  ->
         console.log 'networklib initialized'
         ifdb = db.iface
+        filename = "/config/network/interfaces/default.conf"
+        config = "auto lan0:1\n iface lan0:1 inet static\naddress 169.254.255.254\nnetmask 255.255.255.0\n"
+        fileops.createFile filename, (result) =>
+            unless result instanceof Error
+                fileops.updateFile filename, config
+        
 
     getDevType: (type) ->
         res = type
@@ -155,19 +122,26 @@ class interfaces
         res = []
         ifaces = fileops.readdirSync "/sys/class/net"
         for ifid in ifaces
-            iface = {}
+            #iface = {}
             result = @getInfo  ifid
             console.log result
-            res.push result
+            res.push result unless result instanceof Error
 
-        db.ifaceAlias.forEach (key,val) ->
-            result = {}
-            console.log 'found key ' + key + ' value is ' + val
-            result.name = key
-            result.config = val
-            res.push result
 
         callback (res)
+
+    listVLAN: (callback) ->
+        res = []
+        ifaces = fileops.readdirSync "/sys/class/net"
+        db.iface.forEach (key,val) =>
+            vlan = key.split('.')[0]
+            unless vlan == key
+                console.log 'fetching info for ' + key
+                result = @getInfo key
+                console.log result
+                res.push result unless result instanceof Error
+
+        callback(res)
 
     getConfig: (devName) ->
         #console.log 'listing device configuration'
@@ -205,39 +179,22 @@ class interfaces
     generateConfig: (type, devName, devConfig, addresses, vlanid) ->
         config = ''
         ifid = 0
-
-        config = "auto #{devName}:1 \n"
-        config += "iface #{devName}:1 inet static\n"
-        config += "  " + "address 169.254.255.254\n"
-
         if type == "static"
-            for address in addresses
-              config += "auto #{devName}:#{ifid} \n"
-              config += "iface #{devName}:#{ifid} inet static\n"
-              config += "  " + "address #{address}\n"
-              if ifid == 0
-                  config += devConfig
-                  ifid  = ifid + 2
-              else
-                  ifid = ifid + 1
-
-        else if type == "vlan"
-            config = "auto #{devName}.#{vlanid} \n"
-            config += "iface #{devName}.#{vlanid} inet static \n"
-            config += devConfig
-            config += "  " + "vlan-raw-device #{devName} \n\n"
-                              
+            unless vlanid
+                for address in addresses
+                  config += "auto #{devName}:#{ifid} \n"
+                  config += "iface #{devName}:#{ifid} inet static\n"
+                  config += "  " + "address #{address}\n"
+                  if ifid == 0
+                      config += devConfig
+                      ifid  = ifid + 2
+                  else
+                      ifid = ifid + 1
+            else
+                config = "auto #{devName}\niface #{devName} inet static\n" + devConfig
         else
             config = "auto #{devName} \n"
-            config += "iface #{devName} inet #{type}"
-            console.log 'type is ' + type
-            switch type
-              when "tunnel"
-                  config += "#{type}\n"
-              when "dynamic"
-                  config += "dhcp\n"
-              else
-                  throw new Error "Invalid interface method posting! #{type}"
+            config += "iface #{devName} inet dhcp\n"
             config += devConfig + "\n"
         return config
 
@@ -270,13 +227,23 @@ class interfaces
                 when "number", "string"
                     config += "  #{key}  #{val} \n" unless key == 'type'
                 when "boolean"
-                    config += "  " + key + "\n"
+                    config += "  " + key + "\n" unless key=='dhcp'
+
+        # For VLAN intefaces, we need to load 8021q module.
+        if vlanid
+            devName = devName + '.' + vlanid
+            exec "modprobe 8021q", (error, stdout, stderror) =>
+                if error instanceof Error
+                    console.log error
+                    callback(error)
+                    return
+
         config = @generateConfig type, devName, config, addresses, vlanid
         console.log 'generated config' + config
-        
-        if type == 'vlan'
-          devName = devName + '.' + vlanid
+
+
         filename = "/config/network/interfaces/#{devName}"
+
         fileops.createFile filename, (result) =>
             return new Error "Unable to create configuration file for device: #{devName}!" if result instanceof Error
             fileops.updateFile filename, config
@@ -286,16 +253,15 @@ class interfaces
                     console.log "#{devName} added to network interfaces"
                 @updateConfig()
                 # update all devices in the configuraiton
-
-                db.iface.forEach (key,val) ->
-                    console.log 'updating all devices in the configuration'
-                    console.log 'operating on ' + key
-                    exec "/etc/init.d/networking stop; service networking start", (error, stdout, stderror) =>
+                restart_network (result) =>
+                    if result instanceof Error
                         console.log error
-                        console.log "Done bringing up network interfaces"
-                
+                        return
+                # cannot wait the client for network config to be applied.
+                # Observed that if DHCP server is not configured, this request is blocked till DHCP client responds back.
+                # Hence return response right away instead of waiting for network restart to happen
                 res = {}
-                res.result = true
+                res.id = devName
                 res.config = @getConfig devName
                 callback(res)
 
@@ -310,7 +276,7 @@ class interfaces
         res = {}
         result = ''
         console.log 'fetching info for device: ' + deviceName
-        res.name = deviceName
+        res.id = deviceName
         entry = @getConfig deviceName
         res.config = entry
 
@@ -331,26 +297,28 @@ class interfaces
 
         return res
 
-    delete: (devName, type,  callback) ->
+    delete: (devName, vlan,  callback) ->
         console.log 'deleting the devname ' + devName
         exec "ifdown #{devName}"
-        unless type==false
-            devName = "#{devName}.#{type}"
+        if vlan
+            devName = "#{devName}.#{vlan}"
             exec "vconfig rem #{devName}"
         
-        fileops.removeFile "/config/network/interfaces/#{devName}" (result) =>
+        fileops.removeFile "/config/network/interfaces/#{devName}", (result) =>
             if result instanceof Error
                 err = new Error "Invalid or unconfigured device posting!: #{devName}"
                 callback(err)
             else
                 @updateConfig()
                 db.iface.rm devName
-                callback()
+                restart_network (result) ->
+                    if result instanceof Error
+                        error = new Error "Fatal: Could not restart the network! #{result}"
+                        callback(error)
+                callback(true)
         
 
 module.exports = interfaces
 module.exports.staticSchema = staticSchema
 module.exports.dynamicSchema = dynamicSchema
-module.exports.tunnelSchema = tunnelSchema
-module.exports.vlanSchema = vlanSchema
 
