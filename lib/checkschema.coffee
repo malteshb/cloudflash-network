@@ -1,5 +1,6 @@
 validate = require('json-schema').validate
 interfaces = require './interfaces'
+iproute = require './iproute'
 
 
 validateIfaceStaticSchema = (body, callback) ->
@@ -13,6 +14,13 @@ validateIfaceDynamicSchema = (body, callback) ->
     console.log body
     result = validate body, interfaces.dynamicSchema
     callback result
+
+validateIprouteSchema = (body, callback) ->
+    console.log 'in validate schema'
+    console.log body
+    result = validate body, iproute.iprouteSchema
+    callback result
+
 
   
 module.exports.ifaceSchema = validateIfaceSchema = ->
@@ -32,4 +40,12 @@ module.exports.ifaceSchema = validateIfaceSchema = ->
                 @next()
         else
             return @next new Error "Unsupported Interface type: #{@params.type}!"
+
+module.exports.iprSchema = validateIprSchema = ->
+    console.log 'in iprouteSchema validation '
+    console.log @body
+    validateIprouteSchema @body, (result) =>
+         console.log result
+         return @next new Error "Invalid iproute configuration posting!: #{result.errors}" unless result.valid
+         @next()
 

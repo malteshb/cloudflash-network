@@ -34,6 +34,24 @@ cloudflash-network
   <tr>
     <td>DELETE</td><td>/network/interfaces/:id/vlan/:vid</td><td>Delete an configured VLAN network by ID</td>
   </tr>
+
+  <tr>
+    <td>POST</td><td>/network/route/policy</td><td>Create a policy routing table</td>
+  </tr>
+   <tr>
+    <td>GET</td><td> /network/route</td><td>List of route policy tables</td>
+  </tr>
+
+   <tr>
+    <td>GET</td><td> /network/route/policy/:id</td><td>List a specific policy table</td>
+  </tr>
+
+   <tr>
+    <td>DELETE</td><td>/network/route/policy/:id</td><td>Delete a route policy table</td>
+  </tr>
+
+ 
+
 </table>
 
 
@@ -419,4 +437,139 @@ Delete a VLAN network interface
    Status Code : 204
 
 
+Create a policy route
+-----------------------
+
+    Verb    URI                            Description
+    POST    /network/route/policy  Create a policy routing table.
+
+**Example Request and Response**
+
+### Request JSON For static
+    {
+        "name": "RDS",
+        "static-routes": [
+            {
+                "network": "10.1.2.56.119",
+                "netmask": "255.255.255.0",
+                "gateway": "10.2.56.1",
+                "interface": "eth0"
+            },
+            {
+                "network": "10.1.2.56.110",
+                "netmask": "255.255.255.0",
+                "gateway": "10.2.56.1",
+                "interface": "lan0"
+            }
+        ]
+    }
+
+### Response JSON  
+    {
+       "id": "8af0076e-65c3-4a95-8c11-dbb7b29d13df",
+       "config":
+       {
+           "name": "RDS",
+           "static-routes":
+           [
+               {
+                   "network": "10.1.2.56.119",
+                   "netmask": "255.255.255.0",
+                   "gateway": "10.2.56.1",
+                   "interface": "eth0"
+               },
+               {
+                   "network": "10.1.2.56.110",
+                   "netmask": "255.255.255.0",
+                   "gateway": "10.2.56.1",
+                   "interface": "lan0"
+               }
+           ]
+       }
+    }
+
+List of route policy 
+---------------------
+
+    Verb    URI                            Description
+    GET    /network/route          List all policy route.
+
+**Example Request and Response**
+
+### Response JSON  
+    
+    [
+       {
+           "id": "8af0076e-65c3-4a95-8c11-dbb7b29d13df",
+           "config":
+           {
+               "name": "RDS",
+               "static-routes":
+               [
+                   {
+                       "network": "10.1.2.56.119",
+                       "netmask": "255.255.255.0",
+                       "gateway": "10.2.56.1",
+                       "interface": "eth0"
+                   },
+                   {
+                       "network": "10.1.2.56.110",
+                       "netmask": "255.255.255.0",
+                       "gateway": "10.2.56.1",
+                       "interface": "lan0"
+                   }
+               ]
+           }
+       }
+    ]
+
+
+List a policy 
+---------------
+
+    Verb    URI                                Description
+    GET     /network/route/policy/:id          List a policy route.
+
+**Example Request and Response**
+
+### Response JSON  
+    
+    {
+       "id": "8af0076e-65c3-4a95-8c11-dbb7b29d13df",
+       "config":
+       {
+           "name": "RDS",
+           "static-routes":
+           [
+               {
+                   "network": "10.1.2.56.119",
+                   "netmask": "255.255.255.0",
+                   "gateway": "10.2.56.1",
+                   "interface": "eth0"
+               },
+               {
+                   "network": "10.1.2.56.110",
+                   "netmask": "255.255.255.0",
+                   "gateway": "10.2.56.1",
+                   "interface": "lan0"
+               }
+           ]
+       }
+    }
+
+Delete a route policy 
+---------------------
+
+    Verb       URI                                Description
+    DELETE    /network/route/policy/:id           Delete a route policy table.
+
+**Example Request and Response**
+
+### Request Headers
+
+    DELETE /network/route/policy/8af0076e-65c3-4a95-8c11-dbb7b29d13df
+
+### Response Header
+
+   Status Code : 204
 

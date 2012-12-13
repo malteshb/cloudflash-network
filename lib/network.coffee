@@ -1,9 +1,11 @@
 check = require './checkschema'
 interfaces = require './interfaces'
+iproute = require './iproute'
 
 @include = ->
 
     iface = new interfaces
+    iprt = new iproute
   
     @post '/network/interfaces/:id', check.ifaceSchema,  ->
 
@@ -70,3 +72,32 @@ interfaces = require './interfaces'
                 @next res
 
 
+    @post '/network/route/policy', check.iprSchema,  -> 
+        id = iprt.new()       
+        iprt.iprConfig @body, id, (res) =>
+            unless res instanceof Error
+                @send res
+            else
+                @next new Error "Invalid network posting! #{res}"
+
+    @get '/network/route': ->
+        iprt.listIpr2 (result) =>
+            unless result instanceof Error
+                @send result
+            else
+                @next new Error "Unable to fetch iproute configuration! #{result}"
+
+    @get '/network/route/policy/:id': ->
+        iprt.listByIdIpr2 @params.id, (result) =>
+            unless result instanceof Error
+                @send result
+            else
+                @next new Error "Unable to fetch iproute configuration! #{result}"
+    
+    @del '/network/route/policy/:id': ->
+        iprt.removeIpr2 @params.id, (result) =>
+            unless result instanceof Error
+                @send 204
+            else
+                @next new Error "Unable to delete iproute configuration! #{result}"
+        
