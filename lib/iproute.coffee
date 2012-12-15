@@ -38,15 +38,22 @@ class iproute
             res.push val if val
         callback(res)
    
-    writeToFile : (filename, config) ->
-        fileops.createFile filename, (result) =>
-          unless result instanceof Error
-            console.log 'filename: ' + filename
-            fileops.updateFile filename, config
-            return
-          else
-            err = new Error "Unable to create configuration file for iproute2: #{ipr2Iface}!" 
-            return err
+    writeToFile : (filename, config, callback) ->
+        res =  fileops.fileExistsSync filename
+        unless res instanceof Error
+          Exconfig = fileops.readFileSync filename
+          newConfig = Exconfig + '\n' 
+          newConfig += config
+          fileops.updateFile filename, newConfig
+          return
+        else
+          fileops.createFile filename, (result) =>
+            unless result instanceof Error              
+              fileops.updateFile filename, config
+              return
+            else
+              err = new Error "Unable to create configuration file for iproute2: #{ipr2Iface}!" 
+              return err
     
     generateIpr2Config: (body,type) ->
         res = ''        
@@ -100,6 +107,20 @@ class iproute
         callback(res)
 
     iprConfig: (body, id, callback) ->
+        exists = 0
+        ifaceArr = []        
+        ifaceArr = @getIpr2Info body, "interface"         
+
+        ifaces = fileops.readdirSync "/sys/class/net"
+        for ifid in ifaces
+            ifaceArr.map (item, i) ->                                         
+              if ifid == item then exists = exists + 1
+       
+        if exists < ifaceArr.length
+            err = new Error "Invalid interface name posting!"
+            callback err
+            return      
+        
         ruleTable = " #{body.name} "      
         policyCheck = 0             
             
@@ -110,11 +131,10 @@ class iproute
           unless line.search(ruleTable) is -1
             policyCheck = 1        
         
-        console.log 'rtConfig: '+ rtConfig
+        #console.log 'rtConfig: '+ rtConfig
         if policyCheck == 0
           @listIpr2 (result) =>
-            unless result instanceof Error
-                console.log 'length: ' + result.length
+            unless result instanceof Error               
                 arrIPlen = result.length + 1
                 ruleTable = ruleTable.replace /^\s+/g, ""               
                 rtConfig += "#{arrIPlen} #{ruleTable} \n"
@@ -145,64 +165,79 @@ class iproute
         else
           err = new Error "Policy already exist in rt_tables"
           callback err
+        
 
-    removeIpr2File: (filename) ->
-        fileops.removeFile filename, (result) =>
-          console.log 'remove: ' + filename
-          if result instanceof Error
-            err = new Error "Unable to remove file #{filename}" + result
-            return err
-          else            
-            return
+    removeIpr2File: (filename, policyName) ->
+        rtConfig = fileops.readFileSync filename
+        unless rtConfig instanceof Error          
+          arrConfig = rtConfig.split('\n')
+          newConfig = ''   
+          for line in arrConfig
+            line = line.replace /^\n\s+/g, ""                       
+            unless line.search(policyName) isnt -1
+              newConfig += line + "\n"
+          console.log 'newConfig: ' + newConfig
+          fileops.updateFile filename, newConfig
+          return
+        else
+          err = new Error + rtConfig
+          return err
 
+    getIpr2Info: (obj, data) ->
+        policyIface = []
+        for key, val of obj
+          switch key                
+            when 'static-routes'
+              if val instanceof Array
+                for i in val
+                  if typeof i is "object"
+                    for k, j of i                         
+                      policyIface.push j if k == data
+       
+        return policyIface
+   
     removeIpr2: (id, callback) ->
         entry = db.iproute.get id
         unless entry
             err = new Error "No such iproute configuration!"
             callback err
         else
-            policyIface = []
-            for key, val of entry.config
-              switch key                
-               when 'static-routes'
-                 if val instanceof Array
-                   for i in val
-                     if typeof i is "object"
-                       for k, j of i                         
-                         policyIface.push j if k == 'interface'        
-            
-                       
+            policyIface = @getIpr2Info entry.config, "interface" 
+            policyNwk = @getIpr2Info entry.config, "network"                       
             policyName = " #{entry.config.name} "
             console.log 'policyName : ' + policyName   
-            filename = "/etc/iproute2/rt_tables"
-                    
-            config = fileops.readFileSync filename
-            arrConfig = config.split('\n')
-            newConfig = ''
-            for line in arrConfig              
-              unless line.search(policyName) isnt -1              
-                newConfig += line + "\n"
-            console.log 'newConfig: '+ newConfig
-            fileops.updateFile filename, newConfig
+            filenameRT = "/etc/iproute2/rt_tables"           
             
-            len = policyIface.length
+            lenIface = policyIface.length
+            lennwk = policyNwk.length
+
             result = ''
-            res = ''            
-            if len > 0
-              console.log 'len: ' + policyIface.length
+            res = ''  
+            cmd = ''          
+            if lenIface > 0 && lennwk > 0
+              console.log 'len: ' + lenIface  + lennwk 
               for i in policyIface
                 console.log 'i: ' + i
                 filename = "/etc/sysconfig/network-scripts/route-#{i}"
-                result = @removeIpr2File filename
-                res = result if result instanceof Error                
-               
-              console.log 'here del '
-              if res instanceof Error
-                err = new Error + res
-                callback(err)
-              else                                
-                db.iproute.rm id
-                callback(true)
+                result = @removeIpr2File filename, policyName
+                res = result if result instanceof Error    
+              
+              for j in policyNwk
+                console.log 'j: ' + j
+                cmd += "ip rule del from #{j} table #{policyName}; "
+ 
+              cmd += "ip route flush cache"
+              console.log 'cmd: '+ cmd 
+              exec cmd, (error, stdout, stderror) =>                    
+                unless error
+                  console.log "stdout: #{cmd} " + stdout
+                  result = @removeIpr2File filenameRT, policyName
+                  db.iproute.rm id
+                  callback(true)
+                else
+                  err = new Error + error
+                  callback(err)                       
+                
             else
               err = new Error "Invalid iproute posting #{id}"
               callback(err)  
