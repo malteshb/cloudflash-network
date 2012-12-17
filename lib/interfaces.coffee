@@ -255,7 +255,7 @@ class interfaces
                 # update all devices in the configuraiton
                 restart_network (result) =>
                     if result instanceof Error
-                        console.log error
+                        console.log result
                         return
                 # cannot wait the client for network config to be applied.
                 # Observed that if DHCP server is not configured, this request is blocked till DHCP client responds back.
