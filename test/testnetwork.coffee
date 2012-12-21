@@ -24,13 +24,14 @@ ifacestatic_err = {"type":"static","address":["10.1.10.142"],"gateway":"10.1.10.
 ifacedynamic_err = {"dhcp":true}
 ifaceVlan_err = {"type":"static","address":"10.2.10.111","netmask":"255.255.255.0","gateway":"10.1.10.1"}
 
-ipr2Static = {"name":"ASTRAL","static-routes":[{"network":"10.1.2.188","netmask":"255.255.255.0","gateway":"10.2.56.1","interface":"wan0"}]}
+ipr2Static = {"name":"ASTRAL","static-routes":[{"network":"10.2.56.189","netmask":"255.255.255.0","gateway":"10.2.56.1","interface":"wan0"}]}
 ipr2Static_err = {"static-routes":[{"network":"10.1.2.188","netmask":"255.255.255.0","gateway":"10.2.56.1","interface":"wan0"}]}
+ipr2Static_err_data = {"name":"ASTRAL","static-routes":[{"network":"10.2.56.189","netmask":"255.255.255.0","gateway":"10.2.56.1","interface":"ethtest"}]}
 
 
 describe 'Testing network endpoints functions: ', ->
 
-
+  
   it 'validate network validateIfaceStaticSchema', ->
     result = null
     body = ifacestatic
@@ -249,7 +250,7 @@ describe 'Testing network endpoints functions: ', ->
          expect(result).to.eql({result:true})
          done()
        ), 50
-    
+   
   it 'validate iproute validateIprSchema', ->
     result = null
     body = ipr2Static
@@ -261,3 +262,135 @@ describe 'Testing network endpoints functions: ', ->
     body = ipr2Static_err
     result = validate body, iproute.iprouteSchema
     expect(result).to.not.eql({ valid: true, errors: [] })
+
+  it 'Test function iproute listIpr2', (done) ->
+    result = null
+    ipr1 = new iproute
+
+    ipr1.listIpr2 (res) =>
+      setTimeout (->
+         result = res
+         console.log "result: " + result
+         expect(result).to.be.a('array')
+         done()
+       ), 50
+
+  it 'Test function iproute listByIdIpr2', (done) ->
+    result = null
+    ipr2 = new iproute
+    params = {}
+    params.id = '7174a87e-fec6-4a51-9eeb-6ee11d36fd93'   
+ 
+
+    ipr2.listByIdIpr2 params.id, (res) =>
+      setTimeout (->
+         result = res
+         console.log "result: " + result
+         expect(result).to.be.a('array')
+         done()
+       ), 50
+  
+  it 'Test function iproute listIpr2ByPolicy', (done) ->
+    result = null
+    ipr3 = new iproute
+    policyName = "RDS"
+
+    ipr3.listIpr2ByPolicy policyName, (res) =>
+      setTimeout (->
+         result = res
+         console.log "result: " + result
+         expect(result).to.be.a('object')
+         expect(result).to.have.property('id')
+         expect(result).to.have.property('config')
+         done()
+       ), 50
+
+  it 'Test function iproute priNum', (done) ->
+    result = null
+    ipr4 = new iproute
+
+    ipr4.priNum (res) =>
+      setTimeout (->
+         result = res         
+         expect(result).to.be.a('number')        
+         done()
+       ), 50
+
+  it 'Test function iproute iprConfig', (done) ->
+    result = null
+    ipr5 = new iproute
+    body = ipr2Static
+    id = ipr5.new()
+    ipr5.iprConfig body, id, (res) =>
+      setTimeout (->
+         result = res         
+         expect(result).to.be.a('object')
+         expect(result).to.have.property('id')
+         expect(result).to.have.property('config')        
+         done()
+       ), 50
+
+  it 'Test function iproute removeIpr2', (done) ->
+    result = null
+    ipr6 = new iproute
+    params = {}
+    params.id = '4a05976f-ca37-401b-9be7-c0fb42f1a544'
+    ipr6.removeIpr2 params.id, (res) =>
+      setTimeout (->
+         result = res         
+         expect(result).to.eql(true)             
+         done()
+       ), 50
+  
+  it 'Test function iproute listByIdIpr2 with invalid input', (done) ->
+    result = null
+    ipr7 = new iproute
+    params = {}
+    params.id = '7174a87e-fec6-4a51-9eeb-6ee11d36fd93test'  
+
+    ipr7.listByIdIpr2 params.id, (res) =>
+      setTimeout (->
+         result = res
+         console.log "result: " + result
+         expect(result).not.to.be.a('array')
+         done()
+       ), 50
+  it 'Test function iproute listIpr2ByPolicy with invalid input', (done) ->
+    result = null
+    ipr8 = new iproute
+    policyName = "test"
+
+    ipr8.listIpr2ByPolicy policyName, (res) =>
+      setTimeout (->
+         result = res
+         console.log "result: " + result
+         expect(result).to.be.a('object')
+         expect(result).not.to.have.property('id')
+         expect(result).not.to.have.property('config')         
+         done()
+       ), 50
+
+  it 'Test function iproute iprConfig with invalid input', (done) ->
+    result = null
+    ipr9 = new iproute
+    body = ipr2Static_err_data
+    id = ipr9.new()
+    ipr9.iprConfig body, id, (res) =>
+      setTimeout (->
+         result = res         
+         expect(result).not.to.be.a('object')                
+         done()
+       ), 50
+
+   it 'Test function iproute removeIpr2 with invalid input', (done) ->
+    result = null
+    ipr10 = new iproute
+    params = {}
+    params.id = '4a05976f-ca37-401b-9be7-c0fb42f1a544test'
+    ipr10.removeIpr2 params.id, (res) =>
+      setTimeout (->
+         result = res         
+         expect(result).not.to.eql(true)             
+         done()
+       ), 50
+
