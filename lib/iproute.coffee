@@ -103,11 +103,11 @@ class iproute
                   console.log 'route config: ' + config
                   console.log 'filename main: ' + filename
                   @writeToFile filename, config
-                  res += "ip route add default via #{gateway} dev #{interfaceName} table #{policyName}; "
+                  res += "ip route add #{network}/#{netmask} via #{gateway} dev #{interfaceName} table #{policyName}; "
                   res += "ip rule add from #{network} table #{policyName}; "
                 else
                   result = @removeIpr2File filename, policyName
-                  res += "ip route del default via #{gateway} dev #{interfaceName} table #{policyName}; "
+                  res += "ip route del #{network}/#{netmask} via #{gateway} dev #{interfaceName} table #{policyName}; "
                   res += "ip rule del from #{network} table #{policyName}; "
         return res
 
