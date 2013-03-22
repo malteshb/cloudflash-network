@@ -1,6 +1,6 @@
 {
   "name": "cloudflash-network",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "dependencies": {    
     "fileops":"0.1.3",
     "json-schema": "0.2.0",
