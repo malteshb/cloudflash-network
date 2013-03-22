@@ -98,17 +98,16 @@ class iproute
                 filename = "/etc/sysconfig/network-scripts/route-#{interfaceName}"
                 # should we add or delete this route entry - doing it based on type
                 if type == 'add'
-                  config = "#{network}/#{netmask} dev #{interfaceName} src #{network} table #{policyName} \n"
-                  config += "default via #{gateway} dev #{interfaceName} table #{policyName} \n"
+                  config = "#{network}/#{netmask} dev #{interfaceName} table #{policyName} \n"
                   console.log 'route config: ' + config
                   console.log 'filename main: ' + filename
-                  @writeToFile filename, config
-                  res += "ip route add #{network}/#{netmask} via #{gateway} dev #{interfaceName} table #{policyName}; "
-                  res += "ip rule add from #{network} table #{policyName}; "
+				  #@writeToFile filename, config
+                  res += "ip rule add from all table #{policyName}; "
+                  res += "ip route add #{network}/#{netmask} via #{gateway} table #{policyName}; "
                 else
                   result = @removeIpr2File filename, policyName
-                  res += "ip route del #{network}/#{netmask} via #{gateway} dev #{interfaceName} table #{policyName}; "
-                  res += "ip rule del from #{network} table #{policyName}; "
+                  res += "ip rule del from all table #{policyName}; "
+                  res += "ip route del #{network}/#{netmask} via #{gateway} table #{policyName}; "
         return res
 
 
