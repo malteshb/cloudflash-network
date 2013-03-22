@@ -5,7 +5,7 @@ exec = require('child_process').exec
 uuid = require 'node-uuid'
 fs = require("fs")
 
-@db = db =    
+@db = db =
     iproute: require('dirty') '/tmp/iproute.db'
 
 iprouteSchema =
@@ -16,19 +16,29 @@ iprouteSchema =
         name: {"type":"string", "required":true}
         'static-routes':
            type: "array"
-           items: 
+           items:
               type: "object"
               properties:
                  network:{"type":"string", "required":true}
                  netmask:{"type":"string", "required":true}
                  gateway:{"type":"string", "required":true}
                  interface:{"type":"string", "required":true}
-             
+
+netmaskToMask = (netmask) ->
+    octets = netmask.split('.')
+    count = 0
+    for octet in octets
+        while(octet)
+            if octet & 1
+                count += 1
+            octet = octet >>> 1
+    return count
+
 class iproute
     constructor:  ->
         console.log 'iproute initialized'
         ipdb = db.iproute
-       
+
     new: ->
         id = uuid.v4()
         return id
@@ -38,72 +48,70 @@ class iproute
         db.iproute.forEach (key, val) ->
             res.push val if val
         callback(res)
-   
+
     writeToFile : (filename, config, callback) ->
         res =  fileops.fileExistsSync filename
         unless res instanceof Error
           Exconfig = fileops.readFileSync filename
-          newConfig = Exconfig + '\n' 
+          newConfig = Exconfig + '\n'
           newConfig += config
           fileops.updateFile filename, newConfig
           return
         else
           fileops.createFile filename, (result) =>
-            unless result instanceof Error              
+            unless result instanceof Error
               fileops.updateFile filename, config
               return
             else
-              err = new Error "Unable to create configuration file for iproute2: #{filename}!" 
+              err = new Error "Unable to create configuration file for iproute2: #{filename}!"
               return err
 
     listIpr2ByPolicy: (policyName,callback) ->
         res = {}
-        db.iproute.forEach (key, val) ->          
+        db.iproute.forEach (key, val) ->
             if val && val.config.name == policyName
               res.id = key
               res.config = val.config
         callback(res)
 
     generateIpr2Config: (body,type) ->
-        res = ''        
+        res = ''
         policyName = ''
-        for key, val of body
-          switch key
+        for policyKey , policyObject of body
+          switch policyKey
             when "name"
-              policyName = val
+              policyName = policyObject
             when 'static-routes'
-              switch (typeof val)                
-                when "object"
-                  if val instanceof Array
-                    gateway = ''
-                    ipr2Iface = ''
-                    network = ''
-                    for i in val
-                      if typeof i is "object"
-                        for k, j of i                                                    
-                          switch (k)
-                            when "gateway"
-                              gateway = j
-                            when "interface"
-                              ipr2Iface = j
-                            when "network"
-                              network = j  
-                        filename = "/etc/sysconfig/network-scripts/route-#{ipr2Iface}"
-                        if type == 'add'                                                  
-                          config = "#{network}/24 dev #{ipr2Iface} src #{network} table #{policyName} \n"
-                          config += "default via #{gateway} dev #{ipr2Iface} table #{policyName} \n"
-                          console.log 'route config: ' + config                          
-                          console.log 'filename main: ' + filename
-                          @writeToFile filename, config                        
-                          res += "ip route add default via #{gateway} dev #{ipr2Iface} table #{policyName}; "                             
-                          res += "ip rule add from #{network} table #{policyName}; "            
-                        else 
-                          result = @removeIpr2File filename, policyName                        
-                          res += "ip route del default via #{gateway} dev #{ipr2Iface} table #{policyName}; "                             
-                          res += "ip rule del from #{network} table #{policyName}; "                                                       
+              # static route object contains network, netmask, gateway and interface
+              gateway = interfaceName = network = netmask = ''
+              for routeList in policyObject
+                for routeParam, routeValue  of routeList
+                  switch (routeParam)
+                    when "gateway"
+                      gateway = routeValue
+                    when "interface"
+                      interfaceName = routeValue
+                    when "network"
+                      network = routeValue
+                    when "netmask"
+                      netmask = netmaskToMask(routeValue)
+                filename = "/etc/sysconfig/network-scripts/route-#{interfaceName}"
+                # should we add or delete this route entry - doing it based on type
+                if type == 'add'
+                  config = "#{network}/#{netmask} dev #{interfaceName} src #{network} table #{policyName} \n"
+                  config += "default via #{gateway} dev #{interfaceName} table #{policyName} \n"
+                  console.log 'route config: ' + config
+                  console.log 'filename main: ' + filename
+                  @writeToFile filename, config
+                  res += "ip route add default via #{gateway} dev #{interfaceName} table #{policyName}; "
+                  res += "ip rule add from #{network} table #{policyName}; "
+                else
+                  result = @removeIpr2File filename, policyName
+                  res += "ip route del default via #{gateway} dev #{interfaceName} table #{policyName}; "
+                  res += "ip rule del from #{network} table #{policyName}; "
         return res
 
-   
+
     listByIdIpr2: (id, callback)->
         entry = db.iproute.get id
         if entry
@@ -111,12 +119,12 @@ class iproute
         else
           err = new Error "Invalid id #{id}"
           callback(err)
-    
+
     restart_iproute: (cmd, callback)->
         exec cmd, (error, stdout, stderror) =>
-         unless error            
+         unless error
             callback(true)
-          else            
+          else
             callback(error)
 
      priNum: (callback) ->
@@ -126,7 +134,7 @@ class iproute
         res =  fileops.fileExistsSync filename
         unless res instanceof Error
           Exline = fileops.readFileSync filename
-          arrLines = Exline.split('\n')         
+          arrLines = Exline.split('\n')
           for line in arrLines
             line = line.replace /^\n/g, ""
             if line
@@ -140,64 +148,64 @@ class iproute
           else
             result = 1
           console.log 'result: ' +  result
-          callback(result)                     
+          callback(result)
         else
           err = new Error "error in reading file #{filename}"
-          callback err 
+          callback err
 
-    iprConfig: (body, id, callback) ->       
-            
+    iprConfig: (body, id, callback) ->
+
         exists = 0
         cmd = 0
-        ifaceArr = []        
-        ifaceArr = @getIpr2Info body, "interface"         
+        ifaceArr = []
+        ifaceArr = @getIpr2Info body, "interface"
 
         ifaces = fileops.readdirSync "/sys/class/net"
         for ifid in ifaces
-            ifaceArr.map (item, i) ->                                         
+            ifaceArr.map (item, i) ->
               if ifid == item then exists = exists + 1
-       
+
         if exists < ifaceArr.length
             err = new Error "Invalid interface name posting!"
             callback err
-            return      
-        
-        policyName = body.name      
-        policyCheck = 0             
-            
+            return
+
+        policyName = body.name
+        policyCheck = 0
+
         rtConfig = fileops.readFileSync "/etc/iproute2/rt_tables"
         arrConfig = rtConfig.split('\n')
-        
-        policyNameStr = " #{policyName} "     
-        for line in arrConfig             
+
+        policyNameStr = " #{policyName} "
+        for line in arrConfig
           unless line.search(policyNameStr) is -1
-            policyCheck = 1              
-        
+            policyCheck = 1
+
         @listIpr2ByPolicy policyName, (Dbres) =>
           unless Dbres instanceof Error
             console.log 'here: '+ Dbres
             if Dbres.config
               cmd = @generateIpr2Config Dbres.config, 'del'
-              cmd += @generateIpr2Config body, 'add' 
+              cmd += @generateIpr2Config body, 'add'
               console.log 'cmd: ' + cmd
             else
               console.log 'new post'
               if policyCheck == 0
                 @priNum (result) =>
-                  unless result instanceof Error                                                    
+                  unless result instanceof Error
                     rtConfig += "#{result} #{policyName} \n"
                     fileops.updateFile "/etc/iproute2/rt_tables", rtConfig
-                    cmd = @generateIpr2Config body, 'add'                  
+                    cmd = @generateIpr2Config body, 'add'
                   else
                     err = new Error "Unable to fetch from db iproute"
                     callback err
               else
                 err = new Error "Policy already exist in rt_tables"
                 callback err
- 
+
             if cmd
               cmd += "ip route flush cache"
-              console.log 'cmd: ' + cmd                
+              console.log 'cmd: ' + cmd
               try
                   @restart_iproute cmd, (result) =>
                     if result instanceof Error
@@ -207,24 +215,24 @@ class iproute
                   res.id = id
                   res.config = body
                   if Dbres.id
-                    db.iproute.rm Dbres.id 
+                    db.iproute.rm Dbres.id
                   db.iproute.set id, res, ->
                     console.log "#{id} added to iproute2 configuration"
                     callback res
               catch err
                   console.log err
-                  callback err      
+                  callback err
           else
             err = new Error "Unable to fetch from db iproute"
             callback err
-       
+
     removeIpr2File: (filename, policyName) ->
         rtConfig = fileops.readFileSync filename
-        unless rtConfig instanceof Error          
+        unless rtConfig instanceof Error
           arrConfig = rtConfig.split('\n')
-          newConfig = ''   
+          newConfig = ''
           for line in arrConfig
-            line = line.replace /^\n\s+/g, ""                       
+            line = line.replace /^\n\s+/g, ""
             unless line.search(policyName) isnt -1
               newConfig += line + "\n"
           console.log 'newConfig: ' + newConfig
@@ -237,16 +245,16 @@ class iproute
     getIpr2Info: (obj, data) ->
         policyIface = []
         for key, val of obj
-          switch key                
+          switch key
             when 'static-routes'
               if val instanceof Array
                 for i in val
                   if typeof i is "object"
-                    for k, j of i                         
+                    for k, j of i
                       policyIface.push j if k == data
-       
+
         return policyIface
-   
+
     removeIpr2: (id, callback) ->
         entry = db.iproute.get id
         unless entry
@@ -254,21 +262,21 @@ class iproute
             callback err
         else
             policyName = entry.config.name
-            console.log 'policyName : ' + policyName 
-            filenameRT = "/etc/iproute2/rt_tables"            
+            console.log 'policyName : ' + policyName
+            filenameRT = "/etc/iproute2/rt_tables"
             cmd = @generateIpr2Config entry.config, 'del'
             cmd += "ip route flush cache"
-            console.log 'cmd: '+ cmd 
-            exec cmd, (error, stdout, stderror) =>                    
+            console.log 'cmd: '+ cmd
+            exec cmd, (error, stdout, stderror) =>
               unless error
                 console.log "stdout: #{cmd} " + stdout
-                policyNameStr = " #{policyName} " 
+                policyNameStr = " #{policyName} "
                 result = @removeIpr2File filenameRT, policyNameStr
                 db.iproute.rm id
                 callback(true)
               else
                 err = new Error + error
-                callback(err)          
+                callback(err)
 
 module.exports = iproute
 module.exports.iprouteSchema = iprouteSchema
